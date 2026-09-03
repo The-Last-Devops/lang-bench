@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1360px; background: #101318; color: #e6e9ef; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #2a303a; background: #171b22; flex-shrink: 0">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">lang-bench</span>
+      </div>
+      <nav style="display: flex; gap: 4px">
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navRun}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navOverview}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; background: #252b35; color: #e6e9ef">{{t.navResults}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navHistory}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navHost}}</span>
+      </nav>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span class="mono" style="display: flex; align-items: center; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500">
+        <span style="padding: 3px 8px; border-radius: 4px; background: {{t.viBg}}; color: {{t.viInk}}">VI</span>
+        <span style="padding: 3px 8px; border-radius: 4px; background: {{t.enBg}}; color: {{t.enInk}}">EN</span>
+      </span>
+      <span style="font-size: 12px; font-weight: 500; color: #e6e9ef; border: 1px solid #39414e; border-radius: 6px; padding: 5px 12px">{{t.export}}</span>
+    </div>
+  </header>
+
+  <div style="padding: 12px 24px; border-bottom: 1px solid #1e232b; display: flex; align-items: center; gap: 16px; flex-shrink: 0">
+    <span class="mono" style="font-size: 12px; font-weight: 600">run-0042</span>
+    <span class="mono" style="font-size: 11.5px; color: #6b7482">2026-08-28 12:11 · 6 ph 44 gy</span>
+    <span style="width: 1px; height: 14px; background: #2a303a"></span>
+    <span class="mono" style="font-size: 11.5px; color: #6b7482">Apple M1 · 4P+4E · 16 GB · macOS 26.5.2 · AC power</span>
+    <span style="width: 1px; height: 14px; background: #2a303a"></span>
+    <span class="mono" style="font-size: 11.5px; color: #6b7482">10 {{t.runsWord}} · warmup 3</span>
+    <span class="mono" style="margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 11px; color: #cfd6e0; background: #1a2620; border: 1px solid #2b4436; border-radius: 6px; padding: 4px 10px">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4fbd7c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+      60/60 {{t.checksumOk}}
+    </span>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 16px">
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 600">{{t.chartTitle}}</h2>
+          <p style="margin: 0; font-size: 11.5px; color: #6b7482">{{t.chartNote}}</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0">
+          <sc-for list="{{legend}}" as="l" hint-placeholder-count="5">
+            <span style="display: flex; align-items: center; gap: 6px">
+              <span style="width: 9px; height: 9px; border-radius: 2px; background: {{l.color}}"></span>
+              <span style="font-size: 11.5px; color: #cfd6e0">{{l.name}}</span>
+            </span>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px">
+        <sc-for list="{{columns}}" as="col" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px; padding-left: 58px; padding-right: 66px">
+              <span style="flex: 1; display: flex; justify-content: space-between">
+                <sc-for list="{{axisTicks}}" as="a" hint-placeholder-count="5">
+                  <span class="mono" style="font-size: 9.5px; color: #4d5663">{{a.label}}</span>
+                </sc-for>
+              </span>
+            </div>
+            <sc-for list="{{col.tests}}" as="test" hint-placeholder-count="6">
+              <div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 7px">
+                <div style="display: flex; align-items: baseline; gap: 8px">
+                  <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #e6e9ef">{{test.id}}</span>
+                  <span style="font-size: 10.5px; color: #6b7482">{{test.desc}}</span>
+                </div>
+                <sc-for list="{{test.bars}}" as="b" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span style="width: 50px; flex-shrink: 0; font-size: 10.5px; color: {{b.labelInk}}; font-weight: {{b.labelWeight}}; text-align: right">{{b.name}}</span>
+                    <span style="flex: 1; min-width: 0; height: 11px; border-radius: 3px; background-color: #191e26; background-image: repeating-linear-gradient(to right, #262c36 0 1px, transparent 1px 25%); position: relative">
+                      <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{b.w}}; background: {{b.color}}; border-radius: 3px 4px 4px 3px"></span>
+                    </span>
+                    <span class="mono" style="width: 58px; flex-shrink: 0; text-align: right; font-size: 10.5px; color: {{b.valueInk}}">{{b.value}}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 16px; flex-shrink: 0">
+      <sc-for list="{{sideCharts}}" as="sc" hint-placeholder-count="2">
+        <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 11px">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{sc.title}}</h2>
+            <p style="margin: 0; font-size: 10.5px; color: #6b7482">{{sc.note}}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 7px">
+            <sc-for list="{{sc.bars}}" as="b" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="width: 50px; flex-shrink: 0; font-size: 10.5px; color: #cfd6e0; text-align: right">{{b.name}}</span>
+                <span style="flex: 1; min-width: 0; height: 11px; border-radius: 3px; background: #191e26; position: relative">
+                  <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{b.w}}; background: {{b.color}}; border-radius: 3px 4px 4px 3px"></span>
+                </span>
+                <span class="mono" style="width: 56px; flex-shrink: 0; text-align: right; font-size: 10.5px; color: #cfd6e0">{{b.value}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </sc-for>
+
+      <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 15px 17px; display: flex; flex-direction: column; gap: 11px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{t.insightTitle}}</h2>
+        <div style="display: flex; flex-direction: column; gap: 9px">
+          <sc-for list="{{insights}}" as="i" hint-placeholder-count="3">
+            <div style="display: flex; gap: 9px; align-items: flex-start">
+              <span class="mono" style="font-size: 10px; color: #6b7482; border: 1px solid #2f3743; border-radius: 4px; padding: 1px 5px; flex-shrink: 0; margin-top: 1px">{{i.tag}}</span>
+              <span style="font-size: 11.5px; line-height: 1.45; color: #cfd6e0">{{i.text}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; overflow: hidden; flex-shrink: 0">
+      <div style="padding: 13px 18px; border-bottom: 1px solid #2a303a; display: flex; align-items: center; gap: 12px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{t.tableTitle}}</h2>
+        <span class="mono" style="font-size: 11px; color: #cfd6e0; background: #1e232b; border: 1px solid #2f3743; border-radius: 5px; padding: 2px 8px">json</span>
+        <span style="font-size: 11px; color: #6b7482">{{t.tableHint}}</span>
+      </div>
+      <div>
+        <div style="display: grid; grid-template-columns: 132px repeat(4, minmax(0, 1fr)) 96px 116px; gap: 12px; padding: 9px 18px; border-bottom: 1px solid #232932; background: #1a1f27">
+          <sc-for list="{{tableHead}}" as="h" hint-placeholder-count="7">
+            <span style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7482; text-align: {{h.align}}">{{h.label}}</span>
+          </sc-for>
+        </div>
+        <sc-for list="{{tableRows}}" as="r" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 132px repeat(4, minmax(0, 1fr)) 96px 116px; gap: 12px; padding: 10px 18px; border-bottom: 1px solid #1e232b; align-items: center">
+            <span style="display: flex; align-items: center; gap: 8px">
+              <span style="width: 9px; height: 9px; border-radius: 2px; background: {{r.color}}; flex-shrink: 0"></span>
+              <span style="font-size: 12px; font-weight: 500">{{r.name}}</span>
+            </span>
+            <span class="mono" style="font-size: 11.5px; color: #98a2b0; text-align: right">{{r.min}}</span>
+            <span class="mono" style="font-size: 11.5px; color: #e6e9ef; font-weight: 500; text-align: right">{{r.median}}</span>
+            <span class="mono" style="font-size: 11.5px; color: #98a2b0; text-align: right">{{r.sigma}}</span>
+            <span class="mono" style="font-size: 11.5px; color: #98a2b0; text-align: right">{{r.rss}}</span>
+            <span class="mono" style="font-size: 11.5px; color: {{r.ratioInk}}; text-align: right">{{r.ratio}}</span>
+            <span class="mono" style="font-size: 11px; color: #6b7482; display: flex; align-items: center; justify-content: flex-end; gap: 6px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4fbd7c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+              {{r.checksum}}
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"lang":{"editor":"enum","options":["vi","en"],"default":"vi","section":"Nội dung"},"scale":{"editor":"enum","options":["log","linear"],"default":"log","section":"Biểu đồ"},"$preview":{"width":1440,"height":1360}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lang = this.props.lang ?? 'vi';
+    const scale = this.props.scale ?? 'log';
+    const vi = lang === 'vi';
+    const pick = (a, b) => (vi ? a : b);
+
+    const C = { cpp: '#2c88f2', rust: '#eb4a00', go: '#00a9a1', node: '#009100', php: '#b53e95' };
+    const NAMES = { cpp: 'C++', rust: 'Rust', go: 'Go', node: 'Node.js', php: 'PHP' };
+    const ORDER = ['cpp', 'rust', 'go', 'node', 'php'];
+
+    const t = {
+      navRun: pick('Chạy', 'Run'),
+      navOverview: pick('Tổng quan', 'Overview'),
+      navResults: pick('Kết quả', 'Results'),
+      navHistory: pick('Lịch sử', 'History'),
+      navHost: pick('Hệ thống', 'Host'),
+      export: pick('Xuất JSON', 'Export JSON'),
+      runsWord: pick('lần / phép đo', 'runs each'),
+      checksumOk: pick('checksum khớp', 'checksums match'),
+      chartTitle: pick('Thời gian trung vị theo bài test', 'Median time per benchmark'),
+      chartNote: scale === 'log'
+        ? pick('Trục log — mỗi vạch là ×10. Bar dài gấp đôi KHÔNG có nghĩa chậm gấp đôi.',
+               'Log axis — each gridline is ×10. A bar twice as long is NOT twice as slow.')
+        : pick('Trục thẳng — bar tỉ lệ đúng với thời gian.', 'Linear axis — bar length is proportional to time.'),
+      insightTitle: pick('Điểm đáng chú ý', 'Worth noticing'),
+      tableTitle: pick('Chi tiết', 'Detail'),
+      tableHint: pick('bấm một bài ở biểu đồ trên để xem', 'click a benchmark above to inspect'),
+      viBg: vi ? '#e6e9ef' : 'transparent',
+      viInk: vi ? '#101318' : '#98a2b0',
+      enBg: vi ? 'transparent' : '#e6e9ef',
+      enInk: vi ? '#98a2b0' : '#101318',
+    };
+
+    const TESTS = [
+      { id: 'fib',          vi: 'fib(35) đệ quy',            en: 'fib(35) recursive',        v: [55, 58, 105, 120, 1400] },
+      { id: 'matmul',       vi: 'ma trận 512×512',           en: '512×512 matrix',           v: [95, 100, 150, 180, 9000] },
+      { id: 'primes',       vi: 'sàng 50M',                  en: 'sieve to 50M',             v: [150, 155, 230, 320, 2800] },
+      { id: 'sort',         vi: 'sắp xếp 10M số',            en: 'sort 10M ints',            v: [620, 600, 780, 1900, 2400] },
+      { id: 'hashmap',      vi: '5M khóa chuỗi',             en: '5M string keys',           v: [2100, 1900, 1600, 1400, 1250] },
+      { id: 'json',         vi: '200k record',               en: '200k records',             v: [980, 210, 640, 180, 340] },
+      { id: 'alloc-gc',     vi: '5M object nhỏ',             en: '5M small objects',         v: [410, 380, 890, 1100, 1600] },
+      { id: 'string-regex', vi: '1M lần khớp regex',         en: '1M regex matches',         v: [4200, 90, 310, 150, 120] },
+      { id: 'crypto-hash',  vi: 'SHA-256 500 MB',            en: 'SHA-256 over 500 MB',      v: [420, 450, 430, 440, 460] },
+      { id: 'file-io',      vi: 'ghi + đọc 2 GB',            en: 'write + read 2 GB',        v: [1180, 1150, 1210, 1290, 1350] },
+      { id: 'parallel',     vi: 'matmul 8 luồng',            en: 'matmul on 8 threads',      v: [130, 125, 140, 260, 7800] },
+      { id: 'startup',      vi: 'khởi động, in 1 dòng',      en: 'start up, print one line', v: [1.2, 1.4, 2.1, 38, 14] },
+    ];
+
+    const fmt = (ms) => (ms < 10 ? ms.toFixed(1) + ' ms' : ms < 1000 ? Math.round(ms) + ' ms' : (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + ' s');
+    const MAXLIN = 9000;
+    const width = (ms) => {
+      const f = scale === 'log' ? Math.log10(Math.max(ms, 1)) / 4 : ms / MAXLIN;
+      return Math.max(f * 100, 0.6).toFixed(2) + '%';
+    };
+
+    const mkTest = (T) => {
+      const fastest = Math.min(...T.v);
+      return {
+        id: T.id,
+        desc: vi ? T.vi : T.en,
+        bars: ORDER.map((k, i) => {
+          const best = T.v[i] === fastest;
+          return {
+            name: NAMES[k], color: C[k], w: width(T.v[i]), value: fmt(T.v[i]),
+            labelInk: best ? '#e6e9ef' : '#98a2b0',
+            labelWeight: best ? '600' : '400',
+            valueInk: best ? '#e6e9ef' : '#98a2b0',
+          };
+        }),
+      };
+    };
+
+    const columns = [
+      { tests: TESTS.slice(0, 6).map(mkTest) },
+      { tests: TESTS.slice(6).map(mkTest) },
+    ];
+
+    const axisTicks = (scale === 'log'
+      ? ['1 ms', '10 ms', '100 ms', '1 s', '10 s']
+      : ['0', '2 s', '4 s', '6 s', '9 s']).map(label => ({ label }));
+
+    const legend = ORDER.map(k => ({ name: NAMES[k], color: C[k] }));
+
+    const sideBars = (vals, unit, max) => ORDER.map((k, i) => ({
+      name: NAMES[k], color: C[k],
+      w: Math.max((vals[i] / max) * 100, 0.8).toFixed(1) + '%',
+      value: vals[i] + ' ' + unit,
+    }));
+
+    const sideCharts = [
+      { title: pick('Bộ nhớ đỉnh (peak RSS)', 'Peak memory (RSS)'),
+        note: pick('bài hashmap · 5M khóa', 'hashmap benchmark · 5M keys'),
+        bars: sideBars([402, 356, 512, 940, 1180], 'MB', 1180) },
+      { title: pick('Thời gian khởi động', 'Startup time'),
+        note: pick('in một dòng rồi thoát', 'print one line and exit'),
+        bars: sideBars([1.2, 1.4, 2.1, 38, 14], 'ms', 38) },
+    ];
+
+    const insights = [
+      { tag: 'json', text: pick(
+          'Node.js (180 ms) nhanh hơn C++ (980 ms) — JSON.parse là code C trong V8, còn nlohmann/json là header-only C++.',
+          'Node.js (180 ms) beats C++ (980 ms) — JSON.parse is C inside V8, while nlohmann/json is header-only C++.') },
+      { tag: 'string-regex', text: pick(
+          'std::regex chậm hơn crate regex của Rust 47 lần. PHP (PCRE2) và Node (V8) đều thắng C++ ở đây.',
+          "std::regex is 47× slower than Rust's regex crate. PHP (PCRE2) and Node (V8) both beat C++ here.") },
+      { tag: 'crypto-hash', text: pick(
+          'Cả 5 ngôn ngữ chênh nhau dưới 10% — vì đều gọi cùng một thư viện C có tối ưu asm cho arm64.',
+          'All five land within 10% — they all call the same C library with arm64 asm optimisations.') },
+    ];
+
+    const tableHead = [
+      { label: pick('Ngôn ngữ', 'Language'), align: 'left' },
+      { label: 'min', align: 'right' },
+      { label: pick('trung vị', 'median'), align: 'right' },
+      { label: 'σ', align: 'right' },
+      { label: 'peak rss', align: 'right' },
+      { label: pick('so nhanh nhất', 'vs fastest'), align: 'right' },
+      { label: 'checksum', align: 'right' },
+    ];
+
+    const raw = [
+      { k: 'cpp',  min: '977.6 ms', median: '980.4 ms', sigma: '4.1 ms',  rss: '215 MB', ratio: '×5.4' },
+      { k: 'rust', min: '206.9 ms', median: '210.3 ms', sigma: '2.8 ms',  rss: '121 MB', ratio: '×1.2' },
+      { k: 'go',   min: '631.2 ms', median: '640.8 ms', sigma: '7.4 ms',  rss: '288 MB', ratio: '×3.6' },
+      { k: 'node', min: '174.1 ms', median: '179.6 ms', sigma: '5.9 ms',  rss: '402 MB', ratio: '×1.0' },
+      { k: 'php',  min: '333.5 ms', median: '340.2 ms', sigma: '6.1 ms',  rss: '361 MB', ratio: '×1.9' },
+    ];
+    const tableRows = raw.map(r => ({
+      ...r, name: NAMES[r.k], color: C[r.k], checksum: '8f3a91c2',
+      ratioInk: r.ratio === '×1.0' ? '#e6e9ef' : '#98a2b0',
+    }));
+
+    return { t, columns, axisTicks, legend, sideCharts, insights, tableHead, tableRows };
+  }
+}
+</script>
+</body>
+</html>

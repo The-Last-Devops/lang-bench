@@ -1,0 +1,32 @@
+# Chạy: docker compose -f docker/compose.yaml run --rm bench
+# Run:  docker compose -f docker/compose.yaml run --rm bench
+services:
+  bench:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: lang-bench:latest
+    working_dir: /bench
+    volumes:
+      - ../benchmarks:/bench/benchmarks:ro
+      - ../runner:/bench/runner:ro
+      - ../server:/bench/server:ro
+      - ../web:/bench/web:ro
+      - ../results:/bench/results
+      # Cache build: lượt chạy sau không phải biên dịch lại từ đầu.
+      # Build cache: later runs do not recompile everything from scratch.
+      - build-cache:/bench/build
+      - cargo-cache:/tmp/cargo-target
+    ports:
+      - "${LB_PORT:-8090}:8080"
+    # Số liệu chỉ so sánh được khi mọi lần chạy dùng đúng cùng hạn mức này.
+    # Numbers are only comparable when every run gets exactly these limits.
+    cpus: 4.0
+    mem_limit: 5g
+    # Không cho container bị swap ra ngoài — swap làm sai số liệu bộ nhớ.
+    # No swapping — swap would corrupt the memory numbers.
+    memswap_limit: 5g
+
+volumes:
+  build-cache:
+  cargo-cache:

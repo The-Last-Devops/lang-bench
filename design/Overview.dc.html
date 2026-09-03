@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1040px; background: #101318; color: #e6e9ef; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #2a303a; background: #171b22; flex-shrink: 0">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">lang-bench</span>
+      </div>
+      <nav style="display: flex; gap: 4px">
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navRun}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; background: #252b35; color: #e6e9ef">{{t.navOverview}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navResults}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navHistory}}</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">{{t.navHost}}</span>
+      </nav>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span class="mono" style="display: flex; align-items: center; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500">
+        <span style="padding: 3px 8px; border-radius: 4px; background: {{t.viBg}}; color: {{t.viInk}}">VI</span>
+        <span style="padding: 3px 8px; border-radius: 4px; background: {{t.enBg}}; color: {{t.enInk}}">EN</span>
+      </span>
+      <span style="font-size: 12px; font-weight: 500; color: #e6e9ef; border: 1px solid #39414e; border-radius: 6px; padding: 5px 12px">{{t.share}}</span>
+    </div>
+  </header>
+
+  <div style="padding: 12px 24px; border-bottom: 1px solid #1e232b; display: flex; align-items: center; gap: 16px; flex-shrink: 0">
+    <span class="mono" style="font-size: 12px; font-weight: 600">run-0042</span>
+    <span class="mono" style="font-size: 11.5px; color: #6b7482">2026-08-28 12:11 · 12 {{t.testsWord}} · 5 {{t.langsWord}} · 10 {{t.runsWord}}</span>
+    <span style="width: 1px; height: 14px; background: #2a303a"></span>
+    <span class="mono" style="font-size: 11.5px; color: #6b7482">Apple M1 · 4P+4E · 16 GB · macOS 26.5.2</span>
+    <span class="mono" style="margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 11px; color: #cfd6e0; background: #1a2620; border: 1px solid #2b4436; border-radius: 6px; padding: 4px 10px">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4fbd7c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+      60/60 {{t.checksumOk}}
+    </span>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 18px 24px 20px; display: flex; flex-direction: column; gap: 16px">
+
+    <div style="display: flex; gap: 16px; flex-shrink: 0">
+
+      <section style="flex: 1; min-width: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 17px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 3px">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em">{{t.scoreTitle}}</h2>
+            <p style="margin: 0; font-size: 11.5px; color: #6b7482">{{t.scoreSub}}</p>
+          </div>
+          <span class="mono" style="font-size: 10.5px; color: #6b7482; text-align: right">{{t.scoreAxis}}</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <sc-for list="{{ranks}}" as="r" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 14px">
+              <span class="mono" style="width: 26px; flex-shrink: 0; font-size: 12px; color: {{r.rankInk}}; text-align: right">{{r.rank}}</span>
+              <span style="width: 108px; flex-shrink: 0; display: flex; align-items: center; gap: 9px">
+                <span style="width: 10px; height: 10px; border-radius: 2px; background: {{r.color}}; flex-shrink: 0"></span>
+                <span style="font-size: 13px; font-weight: {{r.weight}}; color: {{r.ink}}">{{r.name}}</span>
+              </span>
+              <span style="flex: 1; min-width: 0; height: 26px; border-radius: 4px; background-color: #191e26; background-image: repeating-linear-gradient(to right, #262c36 0 1px, transparent 1px 20%); position: relative">
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{r.w}}; background: {{r.color}}; border-radius: 4px 5px 5px 4px"></span>
+              </span>
+              <span class="mono" style="width: 76px; flex-shrink: 0; text-align: right; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: {{r.ink}}">{{r.score}}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; padding-left: 148px; padding-right: 90px">
+          <sc-for list="{{scoreTicks}}" as="s" hint-placeholder-count="6">
+            <span class="mono" style="font-size: 9.5px; color: #4d5663">{{s.label}}</span>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="width: 372px; flex-shrink: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 11px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{t.formulaTitle}}</h2>
+        <div class="mono" style="background: #12161c; border: 1px solid #262c36; border-radius: 7px; padding: 11px 12px; font-size: 11px; line-height: 1.75; color: #cfd6e0">
+          <div style="color: #6b7482">{{t.formulaC1}}</div>
+          <div>r = t_nhanhnhất / t_ngônngữ</div>
+          <div style="color: #6b7482; padding-top: 5px">{{t.formulaC2}}</div>
+          <div>điểm = geomean(r₁…r₁₂) × 100</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{formulaNotes}}" as="n" hint-placeholder-count="3">
+            <div style="display: flex; gap: 9px; align-items: flex-start">
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #4d5663; flex-shrink: 0; margin-top: 6px"></span>
+              <span style="font-size: 11.5px; line-height: 1.45; color: #98a2b0">{{n.text}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 13px; flex-shrink: 0">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 600">{{t.groupTitle}}</h2>
+          <p style="margin: 0; font-size: 11.5px; color: #6b7482">{{t.groupSub}}</p>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px">
+        <sc-for list="{{groupPanels}}" as="p" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 7px; border-bottom: 1px solid #262c36">
+              <span class="mono" style="width: 17px; height: 17px; border-radius: 4px; background: #2f3743; color: #b8c1cd; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{p.letter}}</span>
+              <span style="font-size: 12px; font-weight: 600">{{p.name}}</span>
+              <span class="mono" style="margin-left: auto; font-size: 10px; color: #6b7482">{{p.count}}</span>
+            </div>
+            <sc-for list="{{p.bars}}" as="b" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 7px">
+                <span style="width: 46px; flex-shrink: 0; font-size: 10.5px; color: {{b.ink}}; font-weight: {{b.weight}}; text-align: right">{{b.name}}</span>
+                <span style="flex: 1; min-width: 0; height: 9px; border-radius: 3px; background: #191e26; position: relative">
+                  <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{b.w}}; background: {{b.color}}; border-radius: 3px"></span>
+                </span>
+                <span class="mono" style="width: 28px; flex-shrink: 0; text-align: right; font-size: 10.5px; color: {{b.ink}}">{{b.score}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="display: flex; gap: 16px; flex: 1; min-height: 0">
+      <section style="flex: 1; min-width: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 15px 18px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{t.winsTitle}}</h2>
+          <p style="margin: 0; font-size: 10.5px; color: #6b7482">{{t.winsSub}}</p>
+        </div>
+        <div style="display: flex; gap: 10px">
+          <sc-for list="{{wins}}" as="w" hint-placeholder-count="5">
+            <div style="flex: 1; background: #1b2028; border: 1px solid #262c36; border-radius: 8px; padding: 11px 12px; display: flex; flex-direction: column; gap: 8px">
+              <span style="display: flex; align-items: center; gap: 7px">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: {{w.color}}; flex-shrink: 0"></span>
+                <span style="font-size: 11px; color: #cfd6e0">{{w.name}}</span>
+              </span>
+              <span style="display: flex; align-items: baseline; gap: 5px">
+                <span class="mono" style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: {{w.ink}}">{{w.n}}</span>
+                <span class="mono" style="font-size: 10px; color: #6b7482">/ 12</span>
+              </span>
+              <span style="display: flex; gap: 2px">
+                <sc-for list="{{w.pips}}" as="p" hint-placeholder-count="12">
+                  <span style="flex: 1; height: 5px; border-radius: 1.5px; background: {{p.fill}}"></span>
+                </sc-for>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="width: 372px; flex-shrink: 0; background: #14181f; border: 1px solid #2a303a; border-radius: 10px; padding: 15px 18px; display: flex; flex-direction: column; gap: 9px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d9a13a" stroke-width="1.8" stroke-linecap="round"><path d="M12 8.5v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <h2 style="margin: 0; font-size: 13px; font-weight: 600">{{t.caveatTitle}}</h2>
+        </div>
+        <p style="margin: 0; font-size: 11.5px; line-height: 1.55; color: #98a2b0">{{t.caveatBody}}</p>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"lang":{"editor":"enum","options":["vi","en"],"default":"vi","section":"Nội dung"},"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lang = this.props.lang ?? 'vi';
+    const vi = lang === 'vi';
+    const pick = (a, b) => (vi ? a : b);
+
+    const C = { cpp: '#2c88f2', rust: '#eb4a00', go: '#00a9a1', node: '#009100', php: '#b53e95' };
+    const NAMES = { cpp: 'C++', rust: 'Rust', go: 'Go', node: 'Node.js', php: 'PHP' };
+    const ORDER = ['cpp', 'rust', 'go', 'node', 'php'];
+
+    const T = {
+      'fib': [55, 58, 105, 120, 1400],
+      'matmul': [95, 100, 150, 180, 9000],
+      'primes': [150, 155, 230, 320, 2800],
+      'hashmap': [2100, 1900, 1600, 1400, 1250],
+      'json': [980, 210, 640, 180, 340],
+      'sort': [620, 600, 780, 1900, 2400],
+      'alloc-gc': [410, 380, 890, 1100, 1600],
+      'string-regex': [4200, 90, 310, 150, 120],
+      'crypto-hash': [420, 450, 430, 440, 460],
+      'file-io': [1180, 1150, 1210, 1290, 1350],
+      'parallel': [130, 125, 140, 260, 7800],
+      'startup': [1.2, 1.4, 2.1, 38, 14],
+    };
+    const GROUPS = [
+      { letter: 'A', vi: 'CPU thuần', en: 'Pure CPU', tests: ['fib', 'matmul', 'primes'] },
+      { letter: 'B', vi: 'Dữ liệu & bộ nhớ', en: 'Data & memory', tests: ['hashmap', 'json', 'sort', 'alloc-gc'] },
+      { letter: 'C', vi: 'Chuỗi', en: 'Strings', tests: ['string-regex', 'crypto-hash'] },
+      { letter: 'D', vi: 'Hệ thống', en: 'Systems', tests: ['file-io', 'parallel', 'startup'] },
+    ];
+
+    const ratio = (t, i) => Math.min(...T[t]) / T[t][i];
+    const geo = (tests, i) => Math.pow(tests.reduce((p, t) => p * ratio(t, i), 1), 1 / tests.length) * 100;
+    const allTests = Object.keys(T);
+
+    const totals = ORDER.map((k, i) => ({ k, score: geo(allTests, i) }));
+    const sorted = [...totals].sort((a, b) => b.score - a.score);
+    const ranks = sorted.map((r, idx) => ({
+      rank: '#' + (idx + 1),
+      rankInk: idx === 0 ? '#cfd6e0' : '#5b6472',
+      name: NAMES[r.k], color: C[r.k],
+      score: r.score.toFixed(1),
+      w: r.score.toFixed(1) + '%',
+      ink: idx === 0 ? '#e6e9ef' : '#cfd6e0',
+      weight: idx === 0 ? '600' : '500',
+    }));
+
+    const scoreTicks = ['0', '20', '40', '60', '80', '100'].map(label => ({ label }));
+
+    const groupPanels = GROUPS.map(g => {
+      const rows = ORDER.map((k, i) => ({ k, s: geo(g.tests, i) }));
+      const best = Math.max(...rows.map(r => r.s));
+      return {
+        letter: g.letter,
+        name: vi ? g.vi : g.en,
+        count: g.tests.length + (vi ? ' bài' : ' tests'),
+        bars: rows.map(r => ({
+          name: NAMES[r.k], color: C[r.k],
+          score: r.s.toFixed(0),
+          w: Math.max(r.s, 0.8).toFixed(1) + '%',
+          ink: r.s === best ? '#e6e9ef' : '#98a2b0',
+          weight: r.s === best ? '600' : '400',
+        })),
+      };
+    });
+
+    const wins = ORDER.map((k, i) => {
+      const n = allTests.filter(t => T[t][i] === Math.min(...T[t])).length;
+      return {
+        name: NAMES[k], color: C[k], n: n,
+        ink: n > 0 ? '#e6e9ef' : '#6b7482',
+        pips: allTests.map((t, j) => ({ fill: j < n ? C[k] : '#262c36' })),
+      };
+    });
+
+    const t = {
+      navRun: pick('Chạy', 'Run'),
+      navOverview: pick('Tổng quan', 'Overview'),
+      navResults: pick('Kết quả', 'Results'),
+      navHistory: pick('Lịch sử', 'History'),
+      navHost: pick('Hệ thống', 'Host'),
+      share: pick('Chia sẻ', 'Share'),
+      testsWord: pick('bài', 'benchmarks'),
+      langsWord: pick('ngôn ngữ', 'languages'),
+      runsWord: pick('lần mỗi phép đo', 'runs each'),
+      checksumOk: pick('checksum khớp', 'checksums match'),
+
+      scoreTitle: pick('Điểm tổng hợp', 'Overall score'),
+      scoreSub: pick('Càng cao càng nhanh. 100 = nhanh nhất ở cả 12 bài.',
+                     'Higher is faster. 100 would mean fastest in all 12 benchmarks.'),
+      scoreAxis: pick('điểm trên 100', 'score out of 100'),
+
+      formulaTitle: pick('Điểm được tính thế nào', 'How the score is computed'),
+      formulaC1: pick('# mỗi bài: tỉ lệ so với nhanh nhất', '# per benchmark: ratio to the fastest'),
+      formulaC2: pick('# tổng: trung bình hình học của 12 tỉ lệ', '# overall: geometric mean of the 12 ratios'),
+
+      groupTitle: pick('Điểm theo từng nhóm bài', 'Score per benchmark group'),
+      groupSub: pick('Cùng một công thức, chỉ tính trong nhóm — cho thấy thứ hạng đổi theo loại việc.',
+                     'Same formula, scoped to each group — this is where the ranking changes by kind of work.'),
+
+      winsTitle: pick('Số bài về nhất', 'Benchmarks won'),
+      winsSub: pick('đếm số bài mà ngôn ngữ đó nhanh nhất', 'how many benchmarks each language led'),
+
+      caveatTitle: pick('Đọc con số này cho đúng', 'Read this number carefully'),
+      caveatBody: pick(
+        'Một con số không thay được 12 bài test. Điểm tổng phụ thuộc vào việc ta chọn bài nào — thêm một bài regex nữa là C++ tụt tiếp, thêm một bài CPU thuần là PHP tụt tiếp. Hãy xem điểm theo nhóm và số liệu từng bài trước khi kết luận.',
+        'One number cannot replace 12 benchmarks. The overall score depends on which benchmarks we picked — add another regex test and C++ drops further; add another pure-CPU test and PHP drops further. Read the per-group scores and the individual numbers before concluding anything.'),
+
+      viBg: vi ? '#e6e9ef' : 'transparent',
+      viInk: vi ? '#101318' : '#98a2b0',
+      enBg: vi ? 'transparent' : '#e6e9ef',
+      enInk: vi ? '#98a2b0' : '#101318',
+    };
+
+    const formulaNotes = [
+      { text: pick('Trung bình hình học, không phải cộng chia — để một bài chậm bất thường không nuốt hết điểm.',
+                   'Geometric mean, not arithmetic — so one pathological benchmark cannot swallow the whole score.') },
+      { text: pick('Mọi bài có trọng số bằng nhau. Không bài nào được ưu tiên.',
+                   'Every benchmark carries equal weight. None is privileged.') },
+      { text: pick('Chỉ tính các bài có checksum khớp ở cả 5 ngôn ngữ.',
+                   'Only benchmarks whose checksum matched across all five languages are counted.') },
+    ];
+
+    return { t, ranks, scoreTicks, groupPanels, wins, formulaNotes };
+  }
+}
+</script>
+</body>
+</html>

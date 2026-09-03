@@ -1,0 +1,55 @@
+# Một package Rust duy nhất, mỗi bài test là một binary.
+# A single Rust package with one binary per benchmark.
+[package]
+name = "lang-bench"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[dependencies]
+serde_json = "1"
+sha2 = "0.10"
+regex = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[[bin]] 
+name = "fib"
+path = "fib/main.rs"
+[[bin]]
+name = "matmul"
+path = "matmul/main.rs"
+[[bin]]
+name = "primes"
+path = "primes/main.rs"
+[[bin]]
+name = "hashmap"
+path = "hashmap/main.rs"
+[[bin]]
+name = "json"
+path = "json/main.rs"
+[[bin]]
+name = "sort"
+path = "sort/main.rs"
+[[bin]]
+name = "alloc-gc"
+path = "alloc-gc/main.rs"
+[[bin]]
+name = "string-regex"
+path = "string-regex/main.rs"
+[[bin]]
+name = "crypto-hash"
+path = "crypto-hash/main.rs"
+[[bin]]
+name = "file-io"
+path = "file-io/main.rs"
+[[bin]]
+name = "parallel"
+path = "parallel/main.rs"
+[[bin]]
+name = "startup"
+path = "startup/main.rs"

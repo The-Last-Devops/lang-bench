@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Idle.dc.html",     "x": 0,    "y": 0,    "w": 1440, "h": 900,  "title": "1 · Chọn bài test" },
+    { "file": "Running.dc.html",  "x": 1560, "y": 0,    "w": 1440, "h": 900,  "title": "2 · Đang chạy" },
+    { "file": "Host.dc.html",     "x": 3120, "y": 0,    "w": 1080, "h": 980,  "title": "6 · Môi trường test" },
+    { "file": "Overview.dc.html", "x": 0,    "y": 1140, "w": 1440, "h": 1040, "title": "3 · Tổng quan — điểm tổng hợp" },
+    { "file": "Main.dc.html",     "x": 1560, "y": 1140, "w": 1440, "h": 1360, "title": "4 · Kết quả từng bài" },
+    { "file": "History.dc.html",  "x": 3120, "y": 1140, "w": 1440, "h": 900,  "title": "5 · So sánh lịch sử" }
+  ],
+  "annotations": [
+    { "id": "note-flow", "x": 0, "y": -160, "w": 640, "text": "lang-bench — dashboard so sánh hiệu năng 5 ngôn ngữ.\nLuồng: chọn bài → chạy tuần tự → điểm tổng hợp → số liệu từng bài → so với lần trước." },
+    { "id": "note-lang", "x": 3120, "y": -160, "w": 660, "text": "Công tắc VI / EN nằm ở header mọi trang.\nHai artboard \"Tổng quan\" và \"Kết quả\" đổi được thật: bấm vào artboard rồi dùng chip tweak lang = vi / en (Kết quả còn có scale = log / linear)." },
+    { "id": "note-score", "x": 0, "y": 2240, "w": 700, "text": "Điểm tổng hợp = trung bình HÌNH HỌC của 12 tỉ lệ so với ngôn ngữ nhanh nhất mỗi bài (cách SPEC dùng), quy về thang 100.\nRust 92.5 · Go 59.9 · C++ 59.5 · Node 45.8 · PHP 16.9 — C++ bị string-regex kéo xuống, đó là kết quả thật của công thức, không phải lỗi." },
+    { "id": "note-color", "x": 3120, "y": 2100, "w": 700, "text": "Màu 5 ngôn ngữ đã qua validator: đạt cả 6 kiểm tra (lightness, chroma, tách màu cho người mù màu, tương phản trên nền tối).\nMọi bar đều có nhãn tên ngôn ngữ nên không phụ thuộc vào màu." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #101318; color: #e6e9ef; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #2a303a; background: #171b22; flex-shrink: 0">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">lang-bench</span>
+      </div>
+      <nav style="display: flex; gap: 4px">
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; background: #252b35; color: #e6e9ef">Chạy</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Tổng quan</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Kết quả</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Lịch sử</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Hệ thống</span>
+      </nav>
+    </div>
+    <div class="mono" style="display: flex; align-items: center; gap: 14px; font-size: 11px; color: #6b7482">
+      <span class="mono" style="display: flex; align-items: center; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500"><span style="padding: 3px 8px; border-radius: 4px; background: #e6e9ef; color: #101318">VI</span><span style="padding: 3px 8px; color: #98a2b0">EN</span></span>
+      <span>Apple M1 · 4P+4E · 16 GB</span>
+      <span style="width: 1px; height: 13px; background: #2a303a"></span>
+      <span>macOS 26.5.2 · arm64</span>
+    </div>
+  </header>
+
+  <div style="flex: 1; min-height: 0; display: flex; gap: 20px; padding: 20px 24px">
+
+    <section style="flex: 1; min-width: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #2a303a">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <h2 style="margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em">Bài test</h2>
+          <span class="mono" style="font-size: 11px; color: #6b7482">12 bài · 4 nhóm</span>
+        </div>
+        <span style="font-size: 11.5px; color: #98a2b0">Bỏ chọn tất cả</span>
+      </div>
+
+      <div style="flex: 1; padding: 16px 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; align-content: start">
+        <sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+          <div style="background: #1b2028; border: 1px solid #262c36; border-radius: 8px; padding: 12px 13px 6px; display: flex; flex-direction: column; gap: 2px">
+            <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px">
+              <span class="mono" style="width: 18px; height: 18px; border-radius: 4px; background: #2f3743; color: #b8c1cd; font-size: 10.5px; font-weight: 600; display: flex; align-items: center; justify-content: center">{{g.letter}}</span>
+              <span style="font-size: 12px; font-weight: 600; color: #e6e9ef">{{g.name}}</span>
+              <span class="mono" style="font-size: 10.5px; color: #6b7482">{{g.count}}</span>
+            </div>
+            <sc-for list="{{g.tests}}" as="t" hint-placeholder-count="3">
+              <label style="display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid #232932">
+                <span style="width: 15px; height: 15px; border-radius: 4px; background: #e6e9ef; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#101318" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+                </span>
+                <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                  <span class="mono" style="font-size: 11.5px; font-weight: 500; color: #e6e9ef">{{t.id}}</span>
+                  <span style="font-size: 11px; color: #838d9b; line-height: 1.35">{{t.desc}}</span>
+                </span>
+              </label>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <aside style="width: 344px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px">
+
+      <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; overflow: hidden">
+        <div style="padding: 13px 16px; border-bottom: 1px solid #2a303a; display: flex; align-items: baseline; gap: 9px">
+          <h2 style="margin: 0; font-size: 13.5px; font-weight: 600">Ngôn ngữ</h2>
+          <span class="mono" style="font-size: 11px; color: #6b7482">5/5</span>
+        </div>
+        <div style="padding: 4px 16px 10px">
+          <sc-for list="{{langs}}" as="l" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #212730">
+              <span style="width: 9px; height: 9px; border-radius: 2px; background: {{l.color}}; flex-shrink: 0"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 66px; flex-shrink: 0">{{l.name}}</span>
+              <span class="mono" style="font-size: 10.5px; color: #6b7482; flex: 1; min-width: 0">{{l.version}}</span>
+              <span style="width: 30px; height: 17px; border-radius: 9px; background: #e6e9ef; position: relative; flex-shrink: 0">
+                <span style="position: absolute; top: 2.5px; right: 2.5px; width: 12px; height: 12px; border-radius: 50%; background: #171b22"></span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; overflow: hidden">
+        <div style="padding: 13px 16px; border-bottom: 1px solid #2a303a">
+          <h2 style="margin: 0; font-size: 13.5px; font-weight: 600">Cấu hình đo</h2>
+        </div>
+        <div style="padding: 6px 16px 12px; display: flex; flex-direction: column">
+          <sc-for list="{{knobs}}" as="k" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #212730">
+              <span style="display: flex; flex-direction: column; gap: 1px">
+                <span style="font-size: 12px; color: #e6e9ef">{{k.label}}</span>
+                <span style="font-size: 10.5px; color: #6b7482">{{k.hint}}</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 1px; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; flex-shrink: 0">
+                <span style="width: 24px; height: 26px; display: flex; align-items: center; justify-content: center; color: #98a2b0; font-size: 14px">−</span>
+                <span class="mono" style="min-width: 30px; text-align: center; font-size: 12px; font-weight: 500">{{k.value}}</span>
+                <span style="width: 24px; height: 26px; display: flex; align-items: center; justify-content: center; color: #98a2b0; font-size: 14px">+</span>
+              </span>
+            </div>
+          </sc-for>
+          <div style="display: flex; flex-direction: column; gap: 9px; padding-top: 11px">
+            <sc-for list="{{flags}}" as="f" hint-placeholder-count="3">
+              <label style="display: flex; align-items: center; gap: 9px">
+                <span style="width: 15px; height: 15px; border-radius: 4px; background: {{f.box}}; border: 1px solid {{f.ring}}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="{{f.tick}}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+                </span>
+                <span style="font-size: 12px; color: {{f.ink}}">{{f.label}}</span>
+                <sc-if value="{{f.locked}}" hint-placeholder-val="{{true}}">
+                  <span class="mono" style="font-size: 10px; color: #6b7482; border: 1px solid #2f3743; border-radius: 4px; padding: 1px 5px">bắt buộc</span>
+                </sc-if>
+              </label>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: auto; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 15px 16px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <span class="mono" style="font-size: 11.5px; color: #98a2b0">60 phép đo · 780 lần chạy</span>
+          <span class="mono" style="font-size: 11.5px; color: #98a2b0">≈ 6 ph 20 gy</span>
+        </div>
+        <button style="width: 100%; height: 40px; border: 0; border-radius: 8px; background: #e6e9ef; color: #101318; font-family: inherit; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#101318"><path d="M7 4.5v15l13-7.5z"/></svg>
+          Chạy benchmark
+        </button>
+        <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #6b7482">Chạy <strong style="color: #98a2b0; font-weight: 600">tuần tự</strong> từng ngôn ngữ, không song song — tránh tranh CPU làm sai số liệu.</p>
+      </section>
+
+    </aside>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const groups = [
+      { letter: 'A', name: 'CPU thuần', tests: [
+        { id: 'fib', desc: 'fib(35) đệ quy — chi phí gọi hàm & stack' },
+        { id: 'matmul', desc: 'nhân ma trận 512×512 — float & cache' },
+        { id: 'primes', desc: 'sàng Eratosthenes 50M — vòng lặp & mảng' },
+      ]},
+      { letter: 'B', name: 'Dữ liệu & bộ nhớ', tests: [
+        { id: 'hashmap', desc: '5M insert/lookup khóa chuỗi' },
+        { id: 'json', desc: 'parse + serialize 200k record' },
+        { id: 'sort', desc: 'sắp xếp 10M số nguyên — thư viện chuẩn' },
+        { id: 'alloc-gc', desc: 'cấp/thu hồi 5M object nhỏ — áp lực GC' },
+      ]},
+      { letter: 'C', name: 'Chuỗi', tests: [
+        { id: 'string-regex', desc: '1M lần khớp regex trên log' },
+        { id: 'crypto-hash', desc: 'SHA-256 trên 500 MB' },
+      ]},
+      { letter: 'D', name: 'Hệ thống & thực tế', tests: [
+        { id: 'file-io', desc: 'ghi rồi đọc tuần tự 2 GB' },
+        { id: 'parallel', desc: 'chia 8 luồng — matmul song song' },
+        { id: 'startup', desc: 'thời gian khởi động in một dòng' },
+      ]},
+    ].map(g => ({ ...g, count: g.tests.length + ' bài' }));
+
+    const langs = [
+      { name: 'C++',     color: '#2c88f2', version: 'clang 21.0.0 · -O3 -march=native' },
+      { name: 'Rust',    color: '#eb4a00', version: 'rustc 1.96.0 · --release · lto' },
+      { name: 'Go',      color: '#00a9a1', version: 'go 1.27.0 · build -ldflags=-s' },
+      { name: 'Node.js', color: '#009100', version: 'node 22.16.0 · V8 12.9' },
+      { name: 'PHP',     color: '#b53e95', version: 'php 8.4.2 · opcache.jit=tracing' },
+    ];
+
+    const knobs = [
+      { label: 'Số lần chạy', hint: 'lấy trung vị, không lấy trung bình', value: '10' },
+      { label: 'Warmup', hint: 'lần chạy đầu bị bỏ, không tính', value: '3' },
+      { label: 'Timeout mỗi lần', hint: 'giây — quá thì bỏ và ghi nhận', value: '120' },
+    ];
+
+    const on = { box: '#e6e9ef', ring: '#e6e9ef', tick: '#101318', ink: '#e6e9ef' };
+    const off = { box: 'transparent', ring: '#39414e', tick: 'transparent', ink: '#98a2b0' };
+    const flags = [
+      { ...on, label: 'Đối chiếu checksum giữa các ngôn ngữ', locked: true },
+      { ...on, label: 'Đo peak RSS (bộ nhớ đỉnh)', locked: false },
+      { ...off, label: 'Ghim vào lõi hiệu năng (P-core)', locked: false },
+    ];
+
+    return { groups, langs, knobs, flags };
+  }
+}
+</script>
+</body>
+</html>

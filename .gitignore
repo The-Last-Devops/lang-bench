@@ -1,0 +1,9 @@
+node_modules/
+build/
+target/
+fixtures/
+results/*.json
+!results/.gitkeep
+.DS_Store
+__pycache__/
+*.pyc

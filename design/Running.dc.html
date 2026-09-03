@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #101318; color: #e6e9ef; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #2a303a; background: #171b22; flex-shrink: 0">
+    <div style="display: flex; align-items: center; gap: 20px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">lang-bench</span>
+      </div>
+      <nav style="display: flex; gap: 4px">
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; background: #252b35; color: #e6e9ef">Chạy</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Tổng quan</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Kết quả</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Lịch sử</span>
+        <span style="padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #98a2b0">Hệ thống</span>
+      </nav>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span class="mono" style="display: flex; align-items: center; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500"><span style="padding: 3px 8px; border-radius: 4px; background: #e6e9ef; color: #101318">VI</span><span style="padding: 3px 8px; color: #98a2b0">EN</span></span>
+      <span class="mono" style="display: flex; align-items: center; gap: 7px; font-size: 11px; color: #cfd6e0; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 4px 9px">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #d9a13a"></span>đang chạy
+      </span>
+      <span style="font-size: 12px; font-weight: 500; color: #e6e9ef; border: 1px solid #39414e; border-radius: 6px; padding: 5px 12px">Dừng</span>
+    </div>
+  </header>
+
+  <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 18px 24px">
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 13px; flex-shrink: 0">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <span class="mono" style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em">21</span>
+          <span class="mono" style="font-size: 14px; color: #6b7482">/ 60 phép đo</span>
+          <span style="font-size: 12px; color: #98a2b0; margin-left: 6px">đã trôi 2 ph 11 gy</span>
+        </div>
+        <span class="mono" style="font-size: 12px; color: #98a2b0">còn lại ≈ 4 ph 05 gy</span>
+      </div>
+
+      <div style="height: 7px; border-radius: 4px; background: #232932; overflow: hidden; display: flex">
+        <span style="width: 35%; background: #e6e9ef; border-radius: 4px"></span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{stages}}" as="s" hint-placeholder-count="3">
+          <div style="background: #1b2028; border: 1px solid #262c36; border-radius: 8px; padding: 11px 13px; display: flex; align-items: center; gap: 11px">
+            <sc-if value="{{s.dot}}" hint-placeholder-val="{{true}}">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: {{s.color}}; flex-shrink: 0"></span>
+            </sc-if>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7482">{{s.label}}</span>
+              <span class="mono" style="font-size: 14px; font-weight: 500; color: #e6e9ef">{{s.value}}</span>
+            </span>
+            <span class="mono" style="margin-left: auto; font-size: 11px; color: #6b7482; flex-shrink: 0">{{s.of}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div style="flex: 1; min-height: 0; display: flex; gap: 16px">
+
+      <section style="width: 372px; flex-shrink: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #2a303a; display: flex; align-items: baseline; justify-content: space-between">
+          <h2 style="margin: 0; font-size: 13px; font-weight: 600">Hàng đợi</h2>
+          <span class="mono" style="font-size: 10.5px; color: #6b7482">4 xong · 1 đang chạy · 7 chờ</span>
+        </div>
+        <div style="flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 1px">
+          <sc-for list="{{queue}}" as="q" hint-placeholder-count="12">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; background: {{q.bg}}">
+              <span style="width: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center">{{q.icon}}</span>
+              <span class="mono" style="font-size: 11.5px; font-weight: 500; color: {{q.ink}}; width: 92px; flex-shrink: 0">{{q.id}}</span>
+              <span style="display: flex; gap: 3px; flex-shrink: 0">
+                <sc-for list="{{q.cells}}" as="c" hint-placeholder-count="5">
+                  <span style="width: 15px; height: 6px; border-radius: 2px; background: {{c.fill}}"></span>
+                </sc-for>
+              </span>
+              <span class="mono" style="margin-left: auto; font-size: 10.5px; color: {{q.metaInk}}; flex-shrink: 0">{{q.meta}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="flex: 1; min-width: 0; background: #12161c; border: 1px solid #2a303a; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden">
+        <div style="padding: 11px 16px; border-bottom: 1px solid #2a303a; background: #171b22; display: flex; align-items: center; justify-content: space-between">
+          <h2 style="margin: 0; font-size: 13px; font-weight: 600">Log</h2>
+          <span class="mono" style="font-size: 10.5px; color: #6b7482">cuộn theo dòng mới</span>
+        </div>
+        <div class="mono" style="flex: 1; padding: 12px 16px; font-size: 11.5px; line-height: 1.85; overflow: hidden; display: flex; flex-direction: column">
+          <sc-for list="{{log}}" as="ln" hint-placeholder-count="20">
+            <div style="display: flex; gap: 12px; white-space: pre">
+              <span style="color: #4d5663; flex-shrink: 0">{{ln.t}}</span>
+              <span style="color: {{ln.tagInk}}; width: 62px; flex-shrink: 0">{{ln.tag}}</span>
+              <span style="color: {{ln.ink}}">{{ln.text}}</span>
+            </div>
+          </sc-for>
+          <div style="display: flex; gap: 12px; padding-top: 2px">
+            <span style="color: #4d5663">12:04:39</span>
+            <span style="width: 62px; color: #b26adb">rust</span>
+            <span style="color: #cfd6e0">lần 7/10 … <span style="display: inline-block; width: 7px; height: 13px; background: #e6e9ef; vertical-align: -2px"></span></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const stages = [
+      { label: 'Bài test', value: 'json', of: '5 / 12', dot: false, color: '#000' },
+      { label: 'Ngôn ngữ', value: 'Rust', of: '2 / 5', dot: true, color: '#eb4a00' },
+      { label: 'Lần chạy', value: '7', of: '/ 10', dot: false, color: '#000' },
+    ];
+
+    const C = { cpp: '#2c88f2', rust: '#eb4a00', go: '#00a9a1', node: '#009100', php: '#b53e95' };
+    const order = ['cpp', 'rust', 'go', 'node', 'php'];
+    const cells = (n) => order.map((k, i) => ({ fill: i < n ? C[k] : '#252b35' }));
+
+    const tick = '✓';
+    const done = (id, ms) => ({ id, icon: tick, ink: '#98a2b0', bg: 'transparent', cells: cells(5), meta: ms, metaInk: '#6b7482' });
+    const wait = (id) => ({ id, icon: '·', ink: '#5b6472', bg: 'transparent', cells: cells(0), meta: '', metaInk: '#6b7482' });
+
+    const queue = [
+      done('fib', '5 xong'),
+      done('matmul', '5 xong'),
+      done('primes', '5 xong'),
+      done('sort', '5 xong'),
+      { id: 'json', icon: '▸', ink: '#e6e9ef', bg: '#232932', cells: cells(1), meta: '2/5', metaInk: '#cfd6e0' },
+      wait('hashmap'), wait('alloc-gc'), wait('string-regex'),
+      wait('crypto-hash'), wait('file-io'), wait('parallel'), wait('startup'),
+    ];
+
+    const L = (t, tag, tagInk, text, ink) => ({ t, tag, tagInk, text, ink: ink || '#98a2b0' });
+    const log = [
+      L('12:04:02', 'json', '#6b7482', 'build  →  5 ngôn ngữ'),
+      L('12:04:03', 'c++', '#4c94ef', 'clang++ -O3 -march=native -o out/json_cpp  (1.9s)'),
+      L('12:04:05', 'rust', '#b26adb', 'cargo build --release  (4.2s)'),
+      L('12:04:09', 'go', '#39a8b6', 'go build -ldflags=-s  (0.8s)'),
+      L('12:04:10', 'node', '#5aa356', 'không cần build'),
+      L('12:04:10', 'php', '#c76bb0', 'không cần build'),
+      L('12:04:10', 'json', '#6b7482', 'sinh dữ liệu: 200 000 record → fixtures/records.json (48 MB)'),
+      L('12:04:14', 'c++', '#4c94ef', 'warmup 3 lần … bỏ'),
+      L('12:04:17', 'c++', '#4c94ef', 'lần  1/10   984.2 ms   rss 214 MB   checksum 8f3a91c2'),
+      L('12:04:18', 'c++', '#4c94ef', 'lần  2/10   977.6 ms   rss 214 MB   checksum 8f3a91c2'),
+      L('12:04:26', 'c++', '#4c94ef', 'lần 10/10   981.0 ms   rss 215 MB   checksum 8f3a91c2'),
+      L('12:04:26', 'c++', '#4c94ef', 'trung vị 980.4 ms   σ 4.1 ms   ✓ checksum khớp', '#cfd6e0'),
+      L('12:04:27', 'rust', '#b26adb', 'warmup 3 lần … bỏ'),
+      L('12:04:29', 'rust', '#b26adb', 'lần  1/10   212.8 ms   rss 121 MB   checksum 8f3a91c2'),
+      L('12:04:33', 'rust', '#b26adb', 'lần  5/10   209.1 ms   rss 121 MB   checksum 8f3a91c2'),
+    ];
+
+    return { stages, queue, log };
+  }
+}
+</script>
+</body>
+</html>

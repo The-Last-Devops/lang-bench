@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 980px; background: #101318; color: #e6e9ef; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; border-bottom: 1px solid #2a303a; background: #171b22; flex-shrink: 0">
+    <div style="display: flex; align-items: center; gap: 18px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">lang-bench</span>
+      </div>
+      <nav style="display: flex; gap: 4px">
+        <span style="padding: 5px 11px; border-radius: 6px; font-size: 12.5px; color: #98a2b0">Chạy</span>
+        <span style="padding: 5px 11px; border-radius: 6px; font-size: 12.5px; color: #98a2b0">Tổng quan</span>
+        <span style="padding: 5px 11px; border-radius: 6px; font-size: 12.5px; color: #98a2b0">Kết quả</span>
+        <span style="padding: 5px 11px; border-radius: 6px; font-size: 12.5px; color: #98a2b0">Lịch sử</span>
+        <span style="padding: 5px 11px; border-radius: 6px; font-size: 12.5px; font-weight: 500; background: #252b35; color: #e6e9ef">Hệ thống</span>
+      </nav>
+    </div>
+    <span class="mono" style="display: flex; align-items: center; background: #1e232b; border: 1px solid #2f3743; border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500">
+      <span style="padding: 3px 8px; border-radius: 4px; background: #e6e9ef; color: #101318">VI</span>
+      <span style="padding: 3px 8px; color: #98a2b0">EN</span>
+    </span>
+  </header>
+
+  <div style="flex: 1; min-height: 0; padding: 18px 24px 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-shrink: 0">
+      <div style="display: flex; flex-direction: column; gap: 3px">
+        <h1 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">Môi trường chạy test</h1>
+        <p style="margin: 0; font-size: 12px; color: #6b7482">Test environment — kèm theo mọi kết quả để người khác kiểm chứng lại được</p>
+      </div>
+      <span style="display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: #e6e9ef; border: 1px solid #39414e; border-radius: 7px; padding: 7px 13px; flex-shrink: 0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e6e9ef" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+        Copy Markdown
+      </span>
+    </div>
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; overflow: hidden; flex-shrink: 0">
+      <div style="padding: 12px 18px; border-bottom: 1px solid #2a303a; display: flex; align-items: baseline; gap: 9px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">Máy</h2>
+        <span style="font-size: 11px; color: #6b7482">Machine</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr))">
+        <sc-for list="{{machine}}" as="m" hint-placeholder-count="10">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 9px 18px; border-bottom: 1px solid #1e232b">
+            <span style="width: 118px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 11.5px; color: #98a2b0">{{m.vi}}</span>
+              <span style="font-size: 10px; color: #5b6472">{{m.en}}</span>
+            </span>
+            <span class="mono" style="font-size: 11.5px; color: #e6e9ef; line-height: 1.4">{{m.value}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="background: #171b22; border: 1px solid #2a303a; border-radius: 10px; overflow: hidden; flex-shrink: 0">
+      <div style="padding: 12px 18px; border-bottom: 1px solid #2a303a; display: flex; align-items: baseline; gap: 9px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">Bộ công cụ &amp; cờ biên dịch</h2>
+        <span style="font-size: 11px; color: #6b7482">Toolchains &amp; build flags</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 108px 168px 1fr; gap: 12px; padding: 8px 18px; background: #1a1f27; border-bottom: 1px solid #232932">
+        <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7482">Ngôn ngữ</span>
+        <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7482">Phiên bản</span>
+        <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7482">Lệnh build</span>
+      </div>
+      <sc-for list="{{toolchains}}" as="tc" hint-placeholder-count="5">
+        <div style="display: grid; grid-template-columns: 108px 168px 1fr; gap: 12px; padding: 10px 18px; border-bottom: 1px solid #1e232b; align-items: center">
+          <span style="display: flex; align-items: center; gap: 8px">
+            <span style="width: 9px; height: 9px; border-radius: 2px; background: {{tc.color}}; flex-shrink: 0"></span>
+            <span style="font-size: 12px; font-weight: 500">{{tc.name}}</span>
+          </span>
+          <span class="mono" style="font-size: 11.5px; color: #cfd6e0">{{tc.version}}</span>
+          <span class="mono" style="font-size: 11px; color: #98a2b0">{{tc.cmd}}</span>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="flex: 1; min-height: 0; background: #171b22; border: 1px solid #2a303a; border-radius: 10px; padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 11px">
+      <div style="display: flex; align-items: baseline; gap: 9px">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600">Cách đo</h2>
+        <span style="font-size: 11px; color: #6b7482">Method</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px">
+        <sc-for list="{{method}}" as="m" hint-placeholder-count="6">
+          <div style="display: flex; gap: 10px; align-items: flex-start">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: #4d5663; flex-shrink: 0; margin-top: 6px"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 11.5px; color: #cfd6e0; line-height: 1.4">{{m.vi}}</span>
+              <span style="font-size: 10.5px; color: #5b6472; line-height: 1.4">{{m.en}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1080,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const machine = [
+      { vi: 'CPU', en: 'Processor', value: 'Apple M1 (arm64)' },
+      { vi: 'Số lõi', en: 'Cores', value: '4 hiệu năng + 4 tiết kiệm điện' },
+      { vi: 'RAM', en: 'Memory', value: '16 GB unified LPDDR4X' },
+      { vi: 'Page size', en: 'Page size', value: '16 KB' },
+      { vi: 'Hệ điều hành', en: 'OS', value: 'macOS 26.5.2 (build 25F84)' },
+      { vi: 'Kernel', en: 'Kernel', value: 'Darwin 25.5.0' },
+      { vi: 'Ổ đĩa', en: 'Disk', value: 'APFS trên NVMe nội bộ · 228 GB' },
+      { vi: 'Nguồn điện', en: 'Power', value: 'AC power · pin 100%' },
+      { vi: 'Tải nền', en: 'Background load', value: 'load average < 0.4 · không app nào chạy' },
+      { vi: 'Nhiệt', en: 'Thermals', value: 'không throttle trong suốt lượt chạy' },
+    ];
+
+    const C = { cpp: '#2c88f2', rust: '#eb4a00', go: '#00a9a1', node: '#009100', php: '#b53e95' };
+    const toolchains = [
+      { name: 'C++',     color: C.cpp,  version: 'Apple clang 21.0.0',  cmd: 'clang++ -std=c++20 -O3 -march=native -flto' },
+      { name: 'Rust',    color: C.rust, version: 'rustc 1.96.0',        cmd: 'cargo build --release  (lto = "fat", codegen-units = 1)' },
+      { name: 'Go',      color: C.go,   version: 'go 1.27.0',           cmd: 'go build -ldflags="-s -w"' },
+      { name: 'Node.js', color: C.node, version: 'node 22.16.0 · V8 12.9', cmd: 'node main.js   (không cờ đặc biệt)' },
+      { name: 'PHP',     color: C.php,  version: 'php 8.4.2 (NTS)',     cmd: 'php -d opcache.enable_cli=1 -d opcache.jit=tracing main.php' },
+    ];
+
+    const method = [
+      { vi: '10 lần chạy cho mỗi cặp (bài × ngôn ngữ), lấy trung vị — không lấy trung bình.',
+        en: '10 runs per benchmark × language pair; we report the median, not the mean.' },
+      { vi: '3 lần warmup đầu bị loại bỏ hoàn toàn khỏi số liệu.',
+        en: 'The first 3 warmup runs are discarded entirely.' },
+      { vi: 'Chạy tuần tự từng ngôn ngữ, không song song — tránh tranh CPU làm lệch kết quả.',
+        en: 'Languages run strictly one at a time, never in parallel, so they never compete for CPU.' },
+      { vi: 'Mỗi bài in ra một checksum; các ngôn ngữ phải cho cùng giá trị mới được tính là hợp lệ.',
+        en: 'Every benchmark prints a checksum; a result counts only if all languages agree on it.' },
+      { vi: 'Đo cả thời gian bên trong chương trình và thời gian tiến trình, nên thấy được chi phí khởi động.',
+        en: 'We time both the work inside the program and the whole process, so startup cost stays visible.' },
+      { vi: 'Cùng một thuật toán ở cả 5 ngôn ngữ — không SIMD viết tay, không memoize, không thư viện bên thứ ba trừ khi ghi rõ.',
+        en: 'Identical algorithm in all five languages — no hand-written SIMD, no memoisation, no third-party libraries unless noted.' },
+    ];
+
+    return { machine, toolchains, method };
+  }
+}
+</script>
+</body>
+</html>

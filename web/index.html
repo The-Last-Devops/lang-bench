@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lang-bench</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='20'>📊</text></svg>">
+<!-- Font đẹp hơn khi có mạng; không có mạng thì rơi về font hệ thống, giao diện vẫn đúng. -->
+<!-- Nicer fonts when online; offline it falls back to system fonts and the layout still holds. -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #101318; --surface: #171b22; --surface2: #1e232b; --surface3: #252b35;
+    --panel: #1b2028; --border: #2a303a; --border2: #39414e; --hair: #232932;
+    --text: #e6e9ef; --text2: #cfd6e0; --muted: #98a2b0; --dim: #6b7482; --faint: #4d5663;
+    --ok: #4fbd7c; --warn: #d9a13a; --bad: #e0605f;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  [v-cloak] { display: none; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  a { color: #6fb0ff; text-decoration: none; } a:hover { color: #9ccaff; }
+  button { font-family: inherit; cursor: pointer; }
+  h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+
+  header.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; height: 56px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+  nav.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav.tabs button { padding: 5px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  nav.tabs button.on { background: var(--surface3); color: var(--text); }
+  nav.tabs button:hover:not(.on) { color: var(--text2); }
+  .langsw { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 2px; font-size: 10.5px; font-weight: 500; }
+  .langsw button { border: 0; background: transparent; color: var(--muted); padding: 3px 8px; border-radius: 4px; font-family: var(--mono); }
+  .langsw button.on { background: var(--text); color: var(--bg); }
+
+  main { padding: 18px 24px 40px; max-width: 1560px; margin: 0 auto; }
+  .metabar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 0 24px 12px; border-bottom: 1px solid var(--hair); font-size: 11.5px; color: var(--dim); }
+  .metabar .sep { width: 1px; height: 13px; background: var(--border); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .card > .head { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card > .head h2 { font-size: 13.5px; }
+  .card > .head .sub { font-size: 11px; color: var(--dim); }
+  .card > .body { padding: 16px 18px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .grow { flex: 1; min-width: 0; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .pill { font-family: var(--mono); font-size: 11px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border2); border-radius: 5px; padding: 2px 8px; }
+  .badge-ok { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text2); background: #1a2620; border: 1px solid #2b4436; border-radius: 6px; padding: 4px 10px; }
+  .badge-bad { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: #f0c4c4; background: #2a1a1c; border: 1px solid #4a2b2f; border-radius: 6px; padding: 4px 10px; }
+  .btn { height: 36px; padding: 0 16px; border: 1px solid var(--border2); border-radius: 7px; background: transparent; color: var(--text); font-size: 12.5px; font-weight: 500; }
+  .btn:hover { background: var(--surface2); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+  .btn.primary:hover { background: #fff; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .btn.wide { width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; }
+
+  .check { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-top: 1px solid var(--hair); cursor: pointer; }
+  .check:first-of-type { border-top: 0; }
+  .box { width: 15px; height: 15px; border-radius: 4px; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .box.on { background: var(--text); border-color: var(--text); }
+  .box svg { display: none; } .box.on svg { display: block; }
+  .tname { font-family: var(--mono); font-size: 11.5px; font-weight: 500; }
+  .tdesc { font-size: 11px; color: #838d9b; line-height: 1.35; }
+
+  .toggle { width: 30px; height: 17px; border-radius: 9px; background: var(--surface3); border: 1px solid var(--border2); position: relative; flex-shrink: 0; }
+  .toggle.on { background: var(--text); border-color: var(--text); }
+  .toggle i { position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: var(--muted); transition: left .12s, background .12s; }
+  .toggle.on i { left: 15px; background: var(--surface); }
+
+  .dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .track { flex: 1; min-width: 0; height: 11px; border-radius: 3px; background-color: #191e26; position: relative; }
+  .track.grid { background-image: repeating-linear-gradient(to right, #262c36 0 1px, transparent 1px 25%); }
+  .track.grid5 { background-image: repeating-linear-gradient(to right, #262c36 0 1px, transparent 1px 20%); }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px 4px 4px 3px; }
+  .bar { display: flex; align-items: center; gap: 8px; }
+  .bar .name { width: 56px; flex-shrink: 0; font-size: 10.5px; color: var(--muted); text-align: right; }
+  .bar.best .name, .bar.best .val { color: var(--text); font-weight: 600; }
+  .bar .val { width: 66px; flex-shrink: 0; text-align: right; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .axis { display: flex; justify-content: space-between; }
+  .axis span { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
+
+  table.data { width: 100%; border-collapse: collapse; }
+  table.data th { text-align: right; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); font-weight: 500; padding: 8px 10px; background: #1a1f27; border-bottom: 1px solid var(--hair); }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  table.data td { padding: 9px 10px; border-bottom: 1px solid #1e232b; font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-align: right; }
+  table.data td.strong { color: var(--text); font-weight: 500; }
+  table.data td.lang { font-family: var(--sans); font-size: 12px; color: var(--text); }
+  .wrapx { overflow-x: auto; }
+
+  .term { background: #12161c; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .term .lines { font-family: var(--mono); font-size: 11.5px; line-height: 1.8; padding: 12px 16px; height: 340px; overflow-y: auto; }
+  .term .lines > div { display: flex; gap: 12px; }
+  .term .t { color: var(--faint); flex-shrink: 0; }
+  .term .tag { width: 66px; flex-shrink: 0; }
+  .term .msg { color: var(--text2); word-break: break-word; }
+
+  .note { display: flex; gap: 9px; align-items: flex-start; font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+  .note .k { font-family: var(--mono); font-size: 10px; color: var(--dim); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 5px; flex-shrink: 0; margin-top: 1px; }
+  .kv { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid #1e232b; }
+  .kv .k { width: 130px; flex-shrink: 0; font-size: 11.5px; color: var(--muted); }
+  .kv .k small { display: block; font-size: 10px; color: #5b6472; }
+  .kv .v { font-family: var(--mono); font-size: 11.5px; color: var(--text); line-height: 1.4; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+  .empty { padding: 40px 18px; text-align: center; color: var(--dim); font-size: 12.5px; }
+  @media (max-width: 1100px) { .grid2, .grid4 { grid-template-columns: 1fr; } .row { flex-direction: column; } .row > * { width: 100%; } }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <header class="top">
+    <div style="display:flex;align-items:center;gap:20px;min-width:0">
+      <div class="brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V11"/><path d="M9.3 19V5"/><path d="M14.7 19v-5"/><path d="M20 19V9"/></svg>
+        <span>lang-bench</span>
+      </div>
+      <nav class="tabs">
+        <button v-for="t in tabs" :key="t.id" :class="{on: tab === t.id}" @click="tab = t.id">{{ t[lang] }}</button>
+      </nav>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span v-if="running" class="badge-ok" style="background:#26200f;border-color:#4a3c1c;color:#e8d5a8">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--warn)"></span>{{ t('running') }}
+      </span>
+      <div class="langsw">
+        <button :class="{on: lang === 'vi'}" @click="setLang('vi')">VI</button>
+        <button :class="{on: lang === 'en'}" @click="setLang('en')">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="metabar" v-if="run">
+    <span class="mono" style="font-weight:600;color:var(--text)">{{ run.runId }}</span>
+    <span class="mono">{{ fmtDate(run.startedAt) }} · {{ fmtDur(run.durationMs) }}</span>
+    <span class="sep"></span>
+    <span class="mono">{{ hostLine(run.host) }}</span>
+    <span class="sep"></span>
+    <span class="mono">{{ run.host.env === 'docker' ? 'docker' : 'native' }}</span>
+    <span style="margin-left:auto"></span>
+    <span v-if="checksumSummary.bad === 0" class="badge-ok">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+      {{ checksumSummary.good }}/{{ checksumSummary.total }} {{ t('checksumOk') }}
+    </span>
+    <span v-else class="badge-bad">{{ checksumSummary.bad }} {{ t('checksumBad') }}</span>
+  </div>
+
+  <main>
+
+    <!-- ══════════ CHẠY / RUN ══════════ -->
+    <section v-if="tab === 'run'" class="row">
+      <div class="grow stack">
+        <div class="card">
+          <div class="head">
+            <h2>{{ t('benchmarks') }}</h2>
+            <span class="sub">{{ registry ? registry.benchmarks.length : 0 }} {{ t('benchWord') }} · {{ registry ? registry.groups.length : 0 }} {{ t('groupWord') }}</span>
+            <span style="margin-left:auto;display:flex;gap:8px">
+              <button class="btn" style="height:28px;padding:0 10px;font-size:11.5px" @click="selectAllTests(true)">{{ t('selectAll') }}</button>
+              <button class="btn" style="height:28px;padding:0 10px;font-size:11.5px" @click="selectAllTests(false)">{{ t('clearAll') }}</button>
+            </span>
+          </div>
+          <div class="body grid2" v-if="registry">
+            <div v-for="g in registry.groups" :key="g.id" style="background:var(--panel);border:1px solid #262c36;border-radius:8px;padding:12px 13px 6px">
+              <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px">
+                <span class="mono" style="width:18px;height:18px;border-radius:4px;background:var(--surface3);color:#b8c1cd;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ g.id }}</span>
+                <span style="font-size:12px;font-weight:600">{{ g[lang] }}</span>
+                <span class="mono" style="font-size:10.5px;color:var(--dim);margin-left:auto">{{ testsIn(g.id).length }}</span>
+              </div>
+              <label v-for="b in testsIn(g.id)" :key="b.id" class="check" @click.prevent="toggleTest(b.id)">
+                <span class="box" :class="{on: picked.tests.includes(b.id)}">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+                </span>
+                <span style="min-width:0">
+                  <span class="tname">{{ b.id }}</span>
+                  <span class="tdesc" style="display:block">{{ b[lang].desc }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" v-if="running || liveLog.length">
+          <div class="head">
+            <h2>{{ t('progress') }}</h2>
+            <span class="sub" v-if="progress.total">{{ progress.done }} / {{ progress.total }} {{ t('measurements') }}</span>
+            <span class="sub" style="margin-left:auto" v-if="progress.total">{{ pct }}%</span>
+          </div>
+          <div class="body stack">
+            <div style="height:7px;border-radius:4px;background:var(--hair);overflow:hidden">
+              <div :style="{width: pct + '%', height: '100%', background: 'var(--text)', borderRadius: '4px', transition: 'width .2s'}"></div>
+            </div>
+            <div class="grid4" style="gap:12px" v-if="progress.benchmark">
+              <div v-for="s in progressCards" :key="s.label" style="background:var(--panel);border:1px solid #262c36;border-radius:8px;padding:11px 13px;display:flex;align-items:center;gap:11px">
+                <span v-if="s.color" class="dot" :style="{background: s.color, width:'10px', height:'10px'}"></span>
+                <span style="min-width:0">
+                  <span style="display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim)">{{ s.label }}</span>
+                  <span class="mono" style="font-size:14px;font-weight:500">{{ s.value }}</span>
+                </span>
+                <span class="mono" style="margin-left:auto;font-size:11px;color:var(--dim)">{{ s.of }}</span>
+              </div>
+            </div>
+            <div class="term">
+              <div class="lines" ref="logBox">
+                <div v-for="(l, i) in liveLog" :key="i">
+                  <span class="t">{{ l.time }}</span>
+                  <span class="tag" :style="{color: l.tagColor}">{{ l.tag }}</span>
+                  <span class="msg">{{ l.text }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside style="width:344px;flex-shrink:0" class="stack">
+        <div class="card">
+          <div class="head"><h2>{{ t('languages') }}</h2><span class="sub">{{ picked.langs.length }}/{{ registry ? registry.languages.length : 0 }}</span></div>
+          <div class="body" style="padding:4px 16px 10px" v-if="registry">
+            <div v-for="l in registry.languages" :key="l.id" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #212730;cursor:pointer" @click="toggleLang(l.id)">
+              <span class="dot" :style="{background: l.color}"></span>
+              <span style="font-size:12.5px;font-weight:500;width:66px;flex-shrink:0">{{ l.name }}</span>
+              <span class="mono" style="font-size:10.5px;color:var(--dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ toolchainShort(l.id) }}</span>
+              <span class="toggle" :class="{on: picked.langs.includes(l.id)}"><i></i></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="head"><h2>{{ t('config') }}</h2></div>
+          <div class="body" style="padding:6px 16px 12px">
+            <div v-for="k in knobs" :key="k.key" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #212730">
+              <span>
+                <span style="display:block;font-size:12px">{{ k.label }}</span>
+                <span style="display:block;font-size:10.5px;color:var(--dim)">{{ k.hint }}</span>
+              </span>
+              <span style="display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;flex-shrink:0">
+                <button class="btn" style="border:0;height:26px;width:26px;padding:0;background:transparent;color:var(--muted)" @click="bump(k.key, -1)">−</button>
+                <span class="mono" style="min-width:34px;text-align:center;font-size:12px;font-weight:500">{{ k.key === 'runs' ? (picked.runs || t('perBench')) : picked[k.key] }}</span>
+                <button class="btn" style="border:0;height:26px;width:26px;padding:0;background:transparent;color:var(--muted)" @click="bump(k.key, 1)">+</button>
+              </span>
+            </div>
+            <label class="check" style="border-top:0;padding-top:11px" @click.prevent="picked.quick = !picked.quick">
+              <span class="box" :class="{on: picked.quick}">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9 17.5 4 12.5"/></svg>
+              </span>
+              <span>
+                <span style="display:block;font-size:12px">{{ t('quickMode') }}</span>
+                <span class="tdesc">{{ t('quickHint') }}</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="body stack" style="gap:12px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span class="mono" style="font-size:11.5px;color:var(--muted)">{{ plannedCount }} {{ t('measurements') }}</span>
+              <span class="mono" style="font-size:11.5px;color:var(--muted)">{{ picked.tests.length }} × {{ picked.langs.length }}</span>
+            </div>
+            <button class="btn primary wide" :disabled="running || !canRun" @click="startRun">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+              {{ running ? t('runningBtn') : t('runBtn') }}
+            </button>
+            <p style="margin:0;font-size:11px;line-height:1.5;color:var(--dim)">{{ t('sequentialNote') }}</p>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ══════════ TỔNG QUAN / OVERVIEW ══════════ -->
+    <section v-else-if="tab === 'overview'">
+      <div v-if="!run" class="card"><div class="empty">{{ t('noRun') }}</div></div>
+      <div v-else class="stack">
+        <div class="row">
+          <div class="card grow">
+            <div class="head">
+              <h2 style="font-size:15px">{{ t('scoreTitle') }}</h2>
+              <span class="sub">{{ t('scoreSub') }}</span>
+              <span class="sub mono" style="margin-left:auto">{{ t('scoreAxis') }}</span>
+            </div>
+            <div class="body stack" style="gap:14px">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div v-for="(r, i) in ranks" :key="r.id" style="display:flex;align-items:center;gap:14px">
+                  <span class="mono" style="width:26px;flex-shrink:0;font-size:12px;text-align:right" :style="{color: i === 0 ? 'var(--text2)' : 'var(--faint)'}">#{{ i + 1 }}</span>
+                  <span style="width:112px;flex-shrink:0;display:flex;align-items:center;gap:9px">
+                    <span class="dot" :style="{background: r.color, width:'10px', height:'10px'}"></span>
+                    <span style="font-size:13px" :style="{fontWeight: i === 0 ? 600 : 500, color: i === 0 ? 'var(--text)' : 'var(--text2)'}">{{ r.name }}</span>
+                  </span>
+                  <span class="track grid5" style="height:26px;border-radius:4px">
+                    <span class="fill" :style="{width: r.score.toFixed(1) + '%', background: r.color, borderRadius: '4px 5px 5px 4px'}"></span>
+                  </span>
+                  <span class="mono" style="width:80px;flex-shrink:0;text-align:right;font-size:22px;font-weight:600;letter-spacing:-0.02em" :style="{color: i === 0 ? 'var(--text)' : 'var(--text2)'}">{{ r.score.toFixed(1) }}</span>
+                </div>
+              </div>
+              <div class="axis" style="padding-left:152px;padding-right:94px">
+                <span v-for="v in [0,20,40,60,80,100]" :key="v">{{ v }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="width:372px;flex-shrink:0">
+            <div class="head"><h2>{{ t('formulaTitle') }}</h2></div>
+            <div class="body stack" style="gap:11px">
+              <div class="mono" style="background:#12161c;border:1px solid #262c36;border-radius:7px;padding:11px 12px;font-size:11px;line-height:1.75;color:var(--text2)">
+                <div style="color:var(--dim)">{{ t('formulaC1') }}</div>
+                <div>r = t_fastest / t_lang</div>
+                <div style="color:var(--dim);padding-top:5px">{{ t('formulaC2') }}</div>
+                <div>score = geomean(r₁…rₙ) × 100</div>
+              </div>
+              <div class="note" v-for="(n, i) in t('formulaNotes')" :key="i">
+                <span style="width:5px;height:5px;border-radius:50%;background:var(--faint);flex-shrink:0;margin-top:7px"></span>
+                <span>{{ n }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="head">
+            <h2>{{ t('groupTitle') }}</h2>
+            <span class="sub">{{ t('groupSub') }}</span>
+          </div>
+          <div class="body grid4">
+            <div v-for="g in run.registry.groups" :key="g.id" style="display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;gap:8px;padding-bottom:7px;border-bottom:1px solid #262c36">
+                <span class="mono" style="width:17px;height:17px;border-radius:4px;background:var(--surface3);color:#b8c1cd;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ g.id }}</span>
+                <span style="font-size:12px;font-weight:600">{{ g[lang] }}</span>
+              </div>
+              <div v-for="b in groupBars(g.id)" :key="b.id" class="bar" :class="{best: b.best}">
+                <span class="name" style="width:52px">{{ b.name }}</span>
+                <span class="track" style="height:9px"><span class="fill" :style="{width: b.width, background: b.color, borderRadius:'3px'}"></span></span>
+                <span class="val" style="width:30px">{{ b.score }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card grow">
+            <div class="head"><h2>{{ t('winsTitle') }}</h2><span class="sub">{{ t('winsSub') }}</span></div>
+            <div class="body" style="display:flex;gap:10px;flex-wrap:wrap">
+              <div v-for="w in winRows" :key="w.id" style="flex:1;min-width:120px;background:var(--panel);border:1px solid #262c36;border-radius:8px;padding:11px 12px;display:flex;flex-direction:column;gap:8px">
+                <span style="display:flex;align-items:center;gap:7px">
+                  <span class="dot" :style="{background: w.color, width:'8px', height:'8px'}"></span>
+                  <span style="font-size:11px;color:var(--text2)">{{ w.name }}</span>
+                </span>
+                <span style="display:flex;align-items:baseline;gap:5px">
+                  <span class="mono" style="font-size:20px;font-weight:600;letter-spacing:-0.02em" :style="{color: w.n > 0 ? 'var(--text)' : 'var(--dim)'}">{{ w.n }}</span>
+                  <span class="mono" style="font-size:10px;color:var(--dim)">/ {{ w.total }}</span>
+                </span>
+                <span style="display:flex;gap:2px">
+                  <span v-for="i in w.total" :key="i" style="flex:1;height:5px;border-radius:1.5px" :style="{background: i <= w.n ? w.color : '#262c36'}"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="width:372px;flex-shrink:0;background:#14181f">
+            <div class="body stack" style="gap:9px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round"><path d="M12 8.5v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                <h2 style="font-size:13px">{{ t('caveatTitle') }}</h2>
+              </div>
+              <p style="margin:0;font-size:11.5px;line-height:1.55;color:var(--muted)">{{ t('caveatBody') }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ KẾT QUẢ / RESULTS ══════════ -->
+    <section v-else-if="tab === 'results'">
+      <div v-if="!run" class="card"><div class="empty">{{ t('noRun') }}</div></div>
+      <div v-else class="stack">
+        <div class="card">
+          <div class="head">
+            <h2>{{ t('chartTitle') }}</h2>
+            <span class="sub">{{ scale === 'log' ? t('logNote') : t('linNote') }}</span>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <span class="langsw">
+                <button :class="{on: scale === 'log'}" @click="scale = 'log'">log</button>
+                <button :class="{on: scale === 'linear'}" @click="scale = 'linear'">linear</button>
+              </span>
+              <span v-for="l in run.registry.languages" :key="l.id" style="display:flex;align-items:center;gap:6px">
+                <span class="dot" :style="{background: l.color}"></span>
+                <span style="font-size:11.5px;color:var(--text2)">{{ l.name }}</span>
+              </span>
+            </span>
+          </div>
+          <div class="body grid2" style="gap:8px 28px">
+            <div v-for="col in resultColumns" :key="col.key" style="display:flex;flex-direction:column;gap:8px">
+              <div class="axis" style="padding-left:64px;padding-right:74px">
+                <span v-for="a in axisTicks" :key="a">{{ a }}</span>
+              </div>
+              <div v-for="b in col.tests" :key="b.id" style="display:flex;flex-direction:column;gap:4px;padding-bottom:9px">
+                <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                  <span class="mono" style="font-size:11.5px;font-weight:600;color:var(--text);cursor:pointer" @click="selected = b.id">{{ b.id }}</span>
+                  <span style="font-size:10.5px;color:var(--dim)">{{ b.desc }}</span>
+                  <span v-if="b.checksumMatch === false" class="mono" style="font-size:9.5px;color:#f0a0a0">{{ t('mismatch') }}</span>
+                </div>
+                <div v-for="bar in b.bars" :key="bar.id" class="bar" :class="{best: bar.best}">
+                  <span class="name">{{ bar.name }}</span>
+                  <span class="track" :style="{backgroundImage: gridStyle}"><span class="fill" :style="{width: bar.width, background: bar.color}"></span></span>
+                  <span class="val">{{ bar.label }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="card grow" v-for="sc in sideCharts" :key="sc.key">
+            <div class="head"><h2>{{ sc.title }}</h2><span class="sub">{{ sc.note }}</span></div>
+            <div class="body" style="display:flex;flex-direction:column;gap:7px">
+              <div v-for="b in sc.bars" :key="b.id" class="bar" :class="{best: b.best}">
+                <span class="name" style="width:52px">{{ b.name }}</span>
+                <span class="track" style="height:11px"><span class="fill" :style="{width: b.width, background: b.color}"></span></span>
+                <span class="val" style="width:64px">{{ b.label }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="head">
+            <h2>{{ t('detailTitle') }}</h2>
+            <span class="pill">{{ selected }}</span>
+            <span class="sub">{{ selectedBench ? selectedBench[lang].desc : '' }}</span>
+            <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+              <button v-for="b in run.registry.benchmarks" :key="b.id" class="btn mono" style="height:24px;padding:0 8px;font-size:10.5px" :style="selected === b.id ? {background:'var(--surface3)',borderColor:'var(--border2)',color:'var(--text)'} : {}" @click="selected = b.id">{{ b.id }}</button>
+            </span>
+          </div>
+          <div class="wrapx">
+            <table class="data">
+              <thead><tr>
+                <th>{{ t('language') }}</th><th>min</th><th>{{ t('median') }}</th><th>σ</th>
+                <th>{{ t('wall') }}</th><th>{{ t('startupCost') }}</th><th>peak rss</th><th>{{ t('vsFastest') }}</th><th>checksum</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="r in detailRows" :key="r.id">
+                  <td class="lang"><span style="display:inline-flex;align-items:center;gap:8px"><span class="dot" :style="{background: r.color}"></span>{{ r.name }}</span></td>
+                  <template v-if="r.ok">
+                    <td>{{ r.min }}</td>
+                    <td class="strong">{{ r.median }}</td>
+                    <td>{{ r.sigma }}</td>
+                    <td>{{ r.wall }}</td>
+                    <td>{{ r.startup }}</td>
+                    <td>{{ r.rss }}</td>
+                    <td :class="{strong: r.ratio === '×1.00'}">{{ r.ratio }}</td>
+                    <td :style="{color: r.checksumOk ? 'var(--dim)' : '#f0a0a0'}">{{ r.checksum }}</td>
+                  </template>
+                  <td v-else colspan="8" style="text-align:left;color:#f0a0a0">{{ r.error }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="body stack" style="gap:9px" v-if="selectedNotes.length">
+            <div class="note" v-for="(n, i) in selectedNotes" :key="i">
+              <span class="k">{{ n.langName }}</span><span>{{ n.text }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ LỊCH SỬ / HISTORY ══════════ -->
+    <section v-else-if="tab === 'history'" class="row">
+      <div class="card" style="width:290px;flex-shrink:0">
+        <div class="head"><h2>{{ t('savedRuns') }}</h2><span class="sub mono">{{ runs.length }}</span></div>
+        <div class="body" style="padding:6px 7px">
+          <div v-if="!runs.length" class="empty" style="padding:24px 8px">{{ t('noRuns') }}</div>
+          <div v-for="r in runs" :key="r.runId" style="padding:9px 10px;border-radius:7px;cursor:pointer;border:1px solid transparent"
+               :style="r.runId === (run && run.runId) ? {background:'var(--surface3)',borderColor:'var(--border2)'} : {}"
+               @click="loadRun(r.runId)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="mono" style="font-size:11.5px;font-weight:600">{{ r.runId }}</span>
+              <span class="mono" style="font-size:9.5px;color:var(--bg);background:var(--text2);border-radius:4px;padding:1px 5px">{{ r.env }}</span>
+              <span v-if="compareBase === r.runId" class="mono" style="font-size:9.5px;color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:1px 5px">{{ t('baseline') }}</span>
+            </div>
+            <div class="mono" style="font-size:10px;color:var(--dim);padding-top:3px">{{ fmtDate(r.startedAt) }} · {{ r.usableCores }} {{ t('cores') }}</div>
+            <div style="padding-top:6px" v-if="!compareBase || compareBase === r.runId">
+              <button class="btn" style="height:22px;padding:0 8px;font-size:10.5px" @click.stop="compareBase = compareBase === r.runId ? null : r.runId">
+                {{ compareBase === r.runId ? t('unsetBaseline') : t('setBaseline') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grow stack">
+        <div class="card" v-if="!compareBase || !run">
+          <div class="empty">{{ t('pickBaseline') }}</div>
+        </div>
+        <template v-else>
+          <div class="card" v-if="!comparable">
+            <div class="body" style="display:flex;gap:10px;align-items:flex-start">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M12 8.5v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;padding-bottom:4px">{{ t('notComparable') }}</div>
+                <div class="mono" style="font-size:11px;color:var(--muted);line-height:1.6">
+                  <div>{{ compareBase }} — {{ baseRun && baseRun.envKey }}</div>
+                  <div>{{ run.runId }} — {{ run.envKey }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" v-else>
+            <div class="head">
+              <h2>{{ t('deltaTitle') }}</h2>
+              <span class="mono" style="font-size:11px;color:var(--text2)">{{ compareBase }} → {{ run.runId }}</span>
+              <span style="margin-left:auto;display:flex;gap:14px;font-size:10.5px;color:var(--dim);flex-wrap:wrap">
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:8px;border-radius:2px;background:#2f7d52"></span>{{ t('faster') }}</span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:8px;border-radius:2px;background:#8d3535"></span>{{ t('slower') }}</span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:8px;border-radius:2px;background:#262c36"></span>{{ t('noise') }}</span>
+              </span>
+            </div>
+            <div class="body wrapx">
+              <div style="min-width:560px">
+                <div :style="deltaGrid" style="padding-bottom:6px">
+                  <span></span>
+                  <span v-for="l in run.registry.languages" :key="l.id" style="display:flex;align-items:center;justify-content:center;gap:6px">
+                    <span class="dot" :style="{background: l.color, width:'8px', height:'8px'}"></span>
+                    <span style="font-size:10.5px;color:var(--text2)">{{ l.name }}</span>
+                  </span>
+                </div>
+                <div v-for="row in deltaRows" :key="row.id" :style="deltaGrid" style="padding:2px 0">
+                  <span class="mono" style="font-size:10.5px;color:var(--muted);display:flex;align-items:center">{{ row.id }}</span>
+                  <span v-for="c in row.cells" :key="c.id" class="mono" style="height:22px;border-radius:4px;font-size:10.5px;display:flex;align-items:center;justify-content:center"
+                        :style="{background: c.bg, color: c.ink}">{{ c.label }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card" v-if="runs.length > 1">
+          <div class="head"><h2>{{ t('scoreHistory') }}</h2><span class="sub">{{ t('scoreHistoryNote') }}</span></div>
+          <div class="body wrapx">
+            <table class="data" style="min-width:520px">
+              <thead><tr><th>run</th><th>env</th><th v-for="l in allLangIds" :key="l">{{ l }}</th></tr></thead>
+              <tbody>
+                <tr v-for="r in runs" :key="r.runId" style="cursor:pointer" @click="loadRun(r.runId)">
+                  <td class="lang mono">{{ r.runId }}</td>
+                  <td>{{ r.env }}</td>
+                  <td v-for="l in allLangIds" :key="l" :class="{strong: r.scores[l] != null}">{{ r.scores[l] != null ? r.scores[l].toFixed(1) : '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ HỆ THỐNG / HOST ══════════ -->
+    <section v-else-if="tab === 'host'" class="stack">
+      <div class="card">
+        <div class="head">
+          <h2>{{ t('hostTitle') }}</h2>
+          <span class="sub">{{ t('hostSub') }}</span>
+          <button class="btn" style="margin-left:auto;height:30px;font-size:11.5px" @click="copyMarkdown">{{ copied ? t('copied') : 'Copy Markdown' }}</button>
+        </div>
+        <div class="body grid2" style="gap:0 28px" v-if="hostShown">
+          <div v-for="kv in machineRows" :key="kv.k" class="kv">
+            <span class="k">{{ kv.k }}<small>{{ kv.k2 }}</small></span>
+            <span class="v">{{ kv.v }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" v-if="hostShown">
+        <div class="head"><h2>{{ t('toolchainTitle') }}</h2><span class="sub">{{ t('toolchainSub') }}</span></div>
+        <div class="wrapx">
+          <table class="data" style="min-width:640px">
+            <thead><tr><th>{{ t('language') }}</th><th style="text-align:left">{{ t('version') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="tc in toolchainRows" :key="tc.id">
+                <td class="lang"><span style="display:inline-flex;align-items:center;gap:8px"><span class="dot" :style="{background: tc.color}"></span>{{ tc.name }}</span></td>
+                <td style="text-align:left">{{ tc.version }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head"><h2>{{ t('methodTitle') }}</h2><span class="sub">Method</span></div>
+        <div class="body grid2" style="gap:12px 28px">
+          <div class="note" v-for="(m, i) in methodNotes" :key="i">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--faint);flex-shrink:0;margin-top:7px"></span>
+            <span>
+              <span style="display:block;color:var(--text2)">{{ m.vi }}</span>
+              <span style="display:block;font-size:10.5px;color:#5b6472;padding-top:2px">{{ m.en }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="./vendor/vue.global.prod.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+{
+  "schema": 1,
+  "languages": [
+    {
+      "id": "cpp",
+      "name": "C++",
+      "color": "#0095d8",
+      "kind": "compiled",
+      "source": "main.cpp"
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "color": "#956100",
+      "kind": "compiled",
+      "source": "main.rs"
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "color": "#566dd4",
+      "kind": "compiled",
+      "source": "go/main.go"
+    },
+    {
+      "id": "java",
+      "name": "Java",
+      "color": "#d95100",
+      "kind": "jit",
+      "source": "Main.java"
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "color": "#00947d",
+      "kind": "jit",
+      "source": "main.js"
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "color": "#ae57ce",
+      "kind": "jit",
+      "source": "main.php"
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "color": "#467c27",
+      "kind": "interpreted",
+      "source": "main.py"
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby",
+      "color": "#e65188",
+      "kind": "interpreted",
+      "source": "main.rb"
+    }
+  ],
+  "groups": [
+    {
+      "id": "A",
+      "vi": "CPU thuần",
+      "en": "Pure CPU"
+    },
+    {
+      "id": "B",
+      "vi": "Dữ liệu & bộ nhớ",
+      "en": "Data & memory"
+    },
+    {
+      "id": "C",
+      "vi": "Chuỗi",
+      "en": "Strings"
+    },
+    {
+      "id": "D",
+      "vi": "Hệ thống",
+      "en": "Systems"
+    }
+  ],
+  "benchmarks": [
+    {
+      "id": "fib",
+      "group": "A",
+      "runs": 10,
+      "params": {
+        "n": 32
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "fib(32) đệ quy",
+        "desc": "Đệ quy thuần, đo chi phí gọi hàm và stack."
+      },
+      "en": {
+        "title": "fib(32) recursive",
+        "desc": "Plain recursion, measuring call and stack cost."
+      },
+      "notes": [
+        {
+          "lang": "java",
+          "vi": "Mỗi lần chạy là một tiến trình JVM mới, nên JIT không được \"làm nóng\" qua các lần. Với bài ngắn, Java bị tính cả phần chưa kịp tối ưu — đó là con số thật của một tiến trình chạy một lần.",
+          "en": "Each repetition is a fresh JVM process, so the JIT never warms across repetitions. On short benchmarks Java pays for code it has not optimised yet — that is the honest number for a process that runs once."
+        }
+      ]
+    },
+    {
+      "id": "matmul",
+      "group": "A",
+      "runs": 3,
+      "params": {
+        "n": 256
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "Nhân ma trận 256×256",
+        "desc": "Nhân ma trận kiểu ngây thơ, đo thông lượng số thực."
+      },
+      "en": {
+        "title": "256×256 matrix multiply",
+        "desc": "Naive matrix multiply, measuring float throughput."
+      },
+      "notes": [
+        {
+          "lang": "python",
+          "vi": "Python thuần, KHÔNG dùng numpy. numpy nhanh hơn cả trăm lần nhưng đó là gọi vào thư viện C — không còn là so sánh ngôn ngữ nữa.",
+          "en": "Pure Python, NO numpy. numpy is a hundred times faster, but that is calling into a C library, which stops being a language comparison."
+        },
+        {
+          "lang": "ruby",
+          "vi": "Ruby thuần. Đây là loại việc mà ngôn ngữ thông dịch yếu nhất: vòng lặp số học dày đặc, không có thư viện C nào đỡ.",
+          "en": "Plain Ruby. This is where interpreted languages are weakest: dense arithmetic loops with no C library to lean on."
+        }
+      ]
+    },
+    {
+      "id": "primes",
+      "group": "A",
+      "runs": 5,
+      "params": {
+        "n": 10000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "Sàng nguyên tố tới 10 triệu",
+        "desc": "Sàng Eratosthenes, đo vòng lặp chặt trên mảng lớn."
+      },
+      "en": {
+        "title": "Sieve primes to 10 million",
+        "desc": "Sieve of Eratosthenes, measuring tight loops over a large array."
+      },
+      "notes": [
+        {
+          "lang": "php",
+          "vi": "PHP dùng chuỗi làm mảng byte — mảng thường 10 triệu phần tử sẽ ngốn hàng GB.",
+          "en": "PHP uses a string as its byte array — a 10-million-element array would eat gigabytes."
+        },
+        {
+          "lang": "ruby",
+          "vi": "Ruby dùng String qua setbyte/getbyte làm mảng byte — Array.new(10 triệu) sẽ ngốn hàng trăm MB.",
+          "en": "Ruby uses a String via setbyte/getbyte as its byte array — Array.new(10 million) would eat hundreds of megabytes."
+        }
+      ]
+    },
+    {
+      "id": "hashmap",
+      "group": "B",
+      "runs": 5,
+      "params": {
+        "n": 1000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "1 triệu khóa chuỗi",
+        "desc": "Chèn, tra cứu trúng và tra cứu trượt trên bảng băm của thư viện chuẩn."
+      },
+      "en": {
+        "title": "1 million string keys",
+        "desc": "Insert, hit and miss lookups on the standard library hash table."
+      }
+    },
+    {
+      "id": "json",
+      "group": "B",
+      "runs": 10,
+      "params": {
+        "n": 100000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "100k record JSON",
+        "desc": "Dựng, serialize, parse lại rồi đọc số liệu — dùng giá trị động ở cả 5 ngôn ngữ."
+      },
+      "en": {
+        "title": "100k JSON records",
+        "desc": "Build, serialize, parse back and read fields — dynamic values in all five languages."
+      },
+      "notes": [
+        {
+          "lang": "cpp",
+          "vi": "Thư viện chuẩn C++ KHÔNG có JSON. Đây là parser tối giản tự viết trong repo — simdjson hay RapidJSON sẽ nhanh hơn đáng kể.",
+          "en": "The C++ standard library has NO JSON. This is a hand-written minimal parser in the repo — simdjson or RapidJSON would be considerably faster."
+        },
+        {
+          "lang": "rust",
+          "vi": "Dùng serde_json::Value (động), không dùng struct derive — derive sẽ nhanh hơn nhiều.",
+          "en": "Uses serde_json::Value (dynamic), not derived structs — derive would be much faster."
+        },
+        {
+          "lang": "java",
+          "vi": "Java cũng KHÔNG có JSON trong thư viện chuẩn (java.json chưa bao giờ vào JDK). Dùng parser tự viết trong repo, giống C++. Jackson/Gson sẽ nhanh hơn.",
+          "en": "Java also has NO JSON in its standard library (java.json never landed in the JDK). Uses the hand-written parser in the repo, like C++. Jackson/Gson would be faster."
+        }
+      ]
+    },
+    {
+      "id": "sort",
+      "group": "B",
+      "runs": 5,
+      "params": {
+        "n": 3000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "Sắp xếp 3 triệu số nguyên",
+        "desc": "Hàm sort của thư viện chuẩn trên mảng số nguyên 32-bit."
+      },
+      "en": {
+        "title": "Sort 3 million integers",
+        "desc": "The standard library's sort over an array of 32-bit integers."
+      },
+      "notes": [
+        {
+          "lang": "node",
+          "vi": "Dùng Uint32Array.sort() — sort số thật. Array.sort() so sánh theo chuỗi nên chậm hơn nhiều và sẽ là so sánh không công bằng.",
+          "en": "Uses Uint32Array.sort(), a true numeric sort. Array.sort() compares as strings, which is far slower and would be an unfair comparison."
+        },
+        {
+          "lang": "java",
+          "vi": "Java KHÔNG có kiểu unsigned, nên phải dùng long[] để thứ tự sắp xếp khớp các ngôn ngữ dùng uint32. Sort int[] sẽ cho thứ tự khác vì bit dấu.",
+          "en": "Java has NO unsigned type, so it must use long[] to match the ordering of the uint32 languages. Sorting int[] would order differently because of the sign bit."
+        },
+        {
+          "lang": "python",
+          "vi": "list.sort() là Timsort viết bằng C — nên Python bám sát nhóm biên dịch ở bài này.",
+          "en": "list.sort() is Timsort implemented in C — which is why Python keeps up with the compiled group here."
+        }
+      ]
+    },
+    {
+      "id": "alloc-gc",
+      "group": "B",
+      "runs": 5,
+      "params": {
+        "batches": 400,
+        "per": 5000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "2 triệu object nhỏ",
+        "desc": "Cấp rồi thả object theo lô — đo áp lực cấp phát và thu hồi bộ nhớ."
+      },
+      "en": {
+        "title": "2 million small objects",
+        "desc": "Allocate and drop objects in batches — measuring allocation and reclamation pressure."
+      },
+      "notes": [
+        {
+          "lang": "cpp",
+          "vi": "C++/Rust không có GC: thả bộ nhớ ngay và xác định. Go/Node phải chờ GC, PHP đếm tham chiếu.",
+          "en": "C++/Rust have no GC: memory is freed immediately and deterministically. Go/Node wait for a GC; PHP refcounts."
+        },
+        {
+          "lang": "python",
+          "vi": "Dùng __slots__ vì đó là cách một dev Python viết node danh sách liên kết; không có __slots__ mỗi object phải mang thêm một dict.",
+          "en": "Uses __slots__ because that is how a Python developer writes a linked-list node; without it every object carries an extra dict."
+        }
+      ]
+    },
+    {
+      "id": "string-regex",
+      "group": "C",
+      "runs": 5,
+      "params": {
+        "n": 200000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "200k dòng log khớp regex",
+        "desc": "Cùng một regex, engine của từng ngôn ngữ."
+      },
+      "en": {
+        "title": "200k log lines matched by regex",
+        "desc": "The same regex, each language's own engine."
+      },
+      "notes": [
+        {
+          "lang": "rust",
+          "vi": "Crate `regex` không nằm trong thư viện chuẩn — đây là phụ thuộc ngoài duy nhất Rust cần cho bài này.",
+          "en": "The `regex` crate is not in the standard library — it is the one external dependency Rust needs here."
+        },
+        {
+          "lang": "cpp",
+          "vi": "std::regex nổi tiếng chậm. Đây là hàng có trong thư viện chuẩn, nhưng không phải cái nhanh nhất C++ làm được.",
+          "en": "std::regex is famously slow. It is what the standard library ships, not the best C++ can do."
+        }
+      ]
+    },
+    {
+      "id": "crypto-hash",
+      "group": "C",
+      "runs": 5,
+      "params": {
+        "iters": 200
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "SHA-256 trên 200 MB",
+        "desc": "Băm khối 1 MB lặp lại — thực chất đo thư viện C bên dưới."
+      },
+      "en": {
+        "title": "SHA-256 over 200 MB",
+        "desc": "Hashing a 1 MB block repeatedly — really a measure of the C library underneath."
+      },
+      "notes": [
+        {
+          "lang": "cpp",
+          "vi": "Thư viện chuẩn C++ không có SHA-256, nên bài này dùng OpenSSL.",
+          "en": "The C++ standard library has no SHA-256, so this uses OpenSSL."
+        },
+        {
+          "lang": "php",
+          "vi": "hash() của PHP dùng SHA-256 tự cài trong extension hash, KHÔNG phải OpenSSL — nên nó không có lợi thế từ lệnh crypto của CPU.",
+          "en": "PHP's hash() uses the SHA-256 built into its own hash extension, NOT OpenSSL — so it gets no benefit from the CPU's crypto instructions."
+        },
+        {
+          "lang": "rust",
+          "vi": "Crate sha2 mặc định không bật asm; Node và Go gọi vào cài đặt có dùng lệnh crypto của ARM nên nhanh hơn nhiều.",
+          "en": "The sha2 crate ships without asm by default; Node and Go call into implementations that use ARM's crypto instructions and are much faster."
+        },
+        {
+          "lang": "java",
+          "vi": "MessageDigest của JDK có intrinsic dùng lệnh crypto của CPU — nên Java thường ngang C++/Go ở bài này.",
+          "en": "The JDK's MessageDigest has intrinsics using the CPU's crypto instructions — which is why Java usually ties C++/Go here."
+        }
+      ]
+    },
+    {
+      "id": "file-io",
+      "group": "D",
+      "runs": 3,
+      "params": {
+        "mb": 256
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "Ghi rồi đọc lại 256 MB",
+        "desc": "Ghi tuần tự, fsync, rồi đọc lại và tính tổng byte."
+      },
+      "en": {
+        "title": "Write then read back 256 MB",
+        "desc": "Sequential write, fsync, then read back and sum the bytes."
+      },
+      "notes": [
+        {
+          "lang": "cpp",
+          "vi": "Bài này nghẽn ở kernel và đĩa, không ở ngôn ngữ — nên 5 con số gần nhau là điều đúng, không phải lỗi đo.",
+          "en": "This one bottlenecks on the kernel and the disk, not the language — five close numbers is the correct result, not a measurement flaw."
+        }
+      ]
+    },
+    {
+      "id": "parallel",
+      "group": "D",
+      "runs": 3,
+      "params": {
+        "n": 256,
+        "threads": 0
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "Matmul chia nhiều luồng",
+        "desc": "Cùng lượng việc như bài matmul, chia cho số lõi có sẵn."
+      },
+      "en": {
+        "title": "Matmul split across threads",
+        "desc": "The same work as the matmul benchmark, split across the available cores."
+      },
+      "notes": [
+        {
+          "lang": "php",
+          "vi": "PHP CLI không có luồng: nó làm cùng lượng việc đó trên MỘT lõi. Con số này không so sánh trực tiếp được — nó cho thấy giới hạn thật của PHP.",
+          "en": "PHP CLI has no threads: it does the same work on ONE core. This number is not directly comparable — it shows PHP's real limit."
+        },
+        {
+          "lang": "node",
+          "vi": "Dùng worker_threads với SharedArrayBuffer — luồng thật, nhưng phải trả giá khởi tạo worker.",
+          "en": "Uses worker_threads over a SharedArrayBuffer — real threads, but you pay for spawning the workers."
+        },
+        {
+          "lang": "python",
+          "vi": "CPython có GIL: Thread KHÔNG chạy song song cho việc CPU. Nó làm cùng lượng việc trên MỘT lõi. (3.13 có bản free-threaded nhưng chưa mặc định.)",
+          "en": "CPython has a GIL: threads do NOT run CPU work in parallel. It does the same work on ONE core. (3.13 has a free-threaded build, but not by default.)"
+        },
+        {
+          "lang": "ruby",
+          "vi": "CRuby có GVL: cũng chỉ một lõi cho việc CPU, giống PHP và Python.",
+          "en": "CRuby has a GVL: also one core for CPU work, like PHP and Python."
+        },
+        {
+          "lang": "java",
+          "vi": "Java có luồng thật từ ngày đầu — đây là bài Java làm rất gọn.",
+          "en": "Java has had real threads from day one — this is a benchmark Java handles cleanly."
+        }
+      ]
+    },
+    {
+      "id": "startup",
+      "group": "D",
+      "runs": 30,
+      "params": {},
+      "metric": "wall",
+      "vi": {
+        "title": "Khởi động, in một dòng",
+        "desc": "Đo bằng thời gian tiến trình, không phải đồng hồ trong chương trình. Quyết định với CLI và serverless."
+      },
+      "en": {
+        "title": "Start up, print one line",
+        "desc": "Measured by process wall time, not an in-program clock. This is what decides CLI and serverless choices."
+      },
+      "notes": [
+        {
+          "lang": "java",
+          "vi": "Đây là chi phí bật cả JVM. Nó là lý do Java hiếm khi được chọn cho CLI hay serverless, dù chạy lâu thì rất nhanh.",
+          "en": "This is the cost of booting the whole JVM. It is why Java is rarely picked for CLIs or serverless, even though it is fast once warm."
+        }
+      ]
+    }
+  ]
+}
