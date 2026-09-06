@@ -150,6 +150,46 @@ export function startServer({ port = 8080, host = '0.0.0.0' } = {}) {
         return sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'registry.json'), 'utf8')));
       }
 
+      // Danh sách ngôn ngữ đang thật sự chạy được, lấy từ LB_AGENTS — tức là từ
+      // docker-compose. Màn hình không viết cứng ngôn ngữ nào nữa, nên thêm một service là
+      // nó tự hiện thêm một hàng, kể cả phiên bản thứ hai của cùng một ngôn ngữ.
+      // The languages actually available, taken from LB_AGENTS — that is, from
+      // docker-compose. The screen hard-codes none of them, so adding a service adds a row,
+      // second versions of the same language included.
+      if (p === '/api/languages') {
+        const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'registry.json'), 'utf8'));
+        const { parseAgents } = await import('../runner/lib/agents.mjs');
+        const agents = parseAgents();
+        if (!agents.length) return sendJson(res, 200, { languages: registry.languages });
+        // Màu cho ngôn ngữ registry chưa biết: dẫn xuất từ ngôn ngữ gốc nếu tên có tiền tố
+        // trùng (node20 → màu của node), còn không thì dùng màu trung tính.
+        // A colour for a language the registry has not seen: derived from the base language
+        // when the name shares its prefix (node20 takes node's), else a neutral tone.
+        // Phiên bản hỏi thẳng từng agent. /api/host chỉ biết toolchain của container SERVER,
+        // nên nó không thể biết node26 hay node24 là bản nào — mà đó lại đúng là thứ cần hiện.
+        // Versions come from each agent. /api/host only knows the SERVER container's
+        // toolchains, so it cannot say which build node26 or node24 is — which is the very
+        // thing that needs showing.
+        const info = await Promise.all(agents.map(async (a) => {
+          try {
+            const r = await fetch(a.url + '/info', { signal: AbortSignal.timeout(2500) });
+            return r.ok ? await r.json() : null;
+          } catch { return null; }
+        }));
+        const languages = agents.map((a, i) => {
+          const exact = registry.languages.find((l) => l.id === a.id);
+          const base = registry.languages.find((l) => a.id.startsWith(l.id));
+          return {
+            id: a.id,
+            name: exact?.name ?? a.id,
+            color: exact?.color ?? base?.color ?? '#9AA6B6',
+            version: info[i]?.version ?? null,
+            cores: info[i]?.cores ?? null,
+          };
+        });
+        return sendJson(res, 200, { languages });
+      }
+
       if (p === '/api/reference') {
         return sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'reference.json'), 'utf8')));
       }

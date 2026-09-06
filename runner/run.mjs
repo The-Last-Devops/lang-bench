@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { collectHostInfo, envKey } from './lib/host.mjs';
 import { measureOnce, median, stddev } from './lib/measure.mjs';
 import { buildAll } from './lib/build.mjs';
+import { parseAgents, waitReady, buildOn, measureOn } from './lib/agents.mjs';
 import { computeScores } from './lib/score.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,15 +98,133 @@ function fillMissingReferences(results, benchmarks, onEvent) {
   } catch { /* chỉ đọc thì bỏ qua / read-only mount, skip */ }
 }
 
+/**
+ * Chọn cách thực thi: qua agent nếu LB_AGENTS có, còn không thì chạy tại chỗ.
+ *
+ * Cả hai trả về cùng một giao diện, nên vòng lặp đo bên dưới không biết và không cần biết
+ * mình đang đo qua mạng hay đo ngay trong tiến trình này. Đường chạy tại chỗ được giữ lại
+ * để `node runner/run.mjs` trên máy thật vẫn hoạt động như trước.
+ *
+ * Pick an executor: agents when LB_AGENTS is set, otherwise everything in this process.
+ *
+ * Both expose the same interface, so the measuring loop below neither knows nor needs to
+ * know whether it is measuring across a network or in-process. The local path stays so
+ * `node runner/run.mjs` on a real machine still works as before.
+ */
+async function makeExecutor({ registry, benchmarks, languages, opts, onEvent }) {
+  const agents = parseAgents().filter((a) => !opts.langs || opts.langs.includes(a.id));
+  const log = (lang, message) => onEvent({ type: 'log', lang, message });
+
+  if (agents.length) {
+    // Ngôn ngữ có trong LB_AGENTS mà registry chưa biết — ví dụ node20 — vẫn phải chạy
+    // được, nếu không thì thêm một phiên bản lại phải sửa registry.
+    // A language in LB_AGENTS that the registry has never heard of — node20, say — must
+    // still run, or adding a version would mean editing the registry every time.
+    const meta = (id) => registry.languages.find((l) => l.id === id)
+      ?? { id, name: id, color: '#9AA6B6' };
+
+    const live = [];
+    for (const a of agents) {
+      const info = await waitReady(a);
+      if (!info) {
+        onEvent({ type: 'unavailable', language: a.id, reason: 'agent không phản hồi' });
+        continue;
+      }
+      log(a.id, info.version);
+      live.push({ ...a, info });
+    }
+    if (!live.length) throw new Error('không có agent nào phản hồi');
+
+    const ids = benchmarks.map((b) => b.id);
+    const failures = {};
+    for (const a of live) {
+      const r = await buildOn(a, ids);
+      if (r.fatal) { failures[a.id] = Object.fromEntries(ids.map((i) => [i, r.fatal])); log(a.id, `LỖI build: ${r.log ?? r.fatal}`); continue; }
+      failures[a.id] = r.failures ?? {};
+      if (r.note) log(a.id, r.note);
+      if (r.reused) log(a.id, `${r.reused}/${ids.length} đã có sẵn, bỏ qua / cached`);
+      for (const [bid, msg] of Object.entries(r.failures ?? {})) log(a.id, `LỖI ${bid}: ${String(msg).slice(0, 200)}`);
+    }
+
+    const byId = new Map(live.map((a) => [a.id, a]));
+    return {
+      kind: 'agents',
+      languages: live.map((a) => meta(a.id)),
+      failures,
+      // Số nhân lấy từ chính agent: hạn mức cgroup của container ngôn ngữ mới là con số
+      // mà `parallel` chạy dưới, không phải hạn mức của container server.
+      // Cores come from the agent: the language container's own cgroup limit is what
+      // `parallel` runs under, not the server container's.
+      cores: live[0].info.cores,
+      versions: Object.fromEntries(live.map((a) => [a.id, a.info.version])),
+      warmup: (langId, b, params, n) =>
+        measureOn(byId.get(langId), { benchmark: b.id, params, warmup: n, reps: 0, metric: b.metric ?? 'internal', timeoutMs: opts.timeoutMs }, opts.signal),
+      measureOne: async (langId, b, params) => {
+        const r = await measureOn(byId.get(langId), { benchmark: b.id, params, warmup: 0, reps: 1, metric: b.metric ?? 'internal', timeoutMs: opts.timeoutMs }, opts.signal);
+        if (!r.ok) return { error: r.error };
+        return { ms: r.samples[0], wallMs: r.wall[0], rssBytes: r.rssBytes, checksum: r.checksum };
+      },
+    };
+  }
+
+  // ── chạy tại chỗ, như trước khi tách container ──
+  const toolchains = await buildAll({
+    root: ROOT,
+    registry: { ...registry, benchmarks },
+    onLog: (e) => onEvent({ type: 'log', ...e }),
+    only: new Set(languages.map((l) => l.id)),
+  });
+  const live = languages.filter((l) => toolchains[l.id]?.available);
+  for (const l of languages) {
+    if (!toolchains[l.id]?.available) {
+      onEvent({ type: 'unavailable', language: l.id, reason: toolchains[l.id]?.reason ?? 'không rõ' });
+    }
+  }
+  const host = await collectHostInfo();
+  const env = { LB_TMPDIR: process.env.LB_TMPDIR || (host.env === 'docker' ? '/tmp' : path.join(ROOT, 'build')) };
+  const cmdFor = (langId, b, params) => toolchains[langId].run(b.id, params);
+  return {
+    kind: 'local',
+    languages: live,
+    failures: Object.fromEntries(live.map((l) => [l.id, toolchains[l.id].failures ?? {}])),
+    cores: host.usableCores,
+    versions: {},
+    warmup: async (langId, b, params, n) => {
+      const { cmd, args } = cmdFor(langId, b, params);
+      for (let i = 0; i < n; i++) {
+        const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
+        if (r.error) return { ok: false, error: r.error };
+      }
+      return { ok: true };
+    },
+    measureOne: async (langId, b, params) => {
+      const { cmd, args } = cmdFor(langId, b, params);
+      const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
+      if (r.error) return { error: r.error };
+      return { ms: b.metric === 'wall' ? r.wallMs : r.internalMs, wallMs: r.wallMs, rssBytes: r.rssBytes, checksum: r.checksum };
+    },
+  };
+}
+
 export async function runSuite(opts, onEvent = () => {}) {
   const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'registry.json'), 'utf8'));
 
   let benchmarks = registry.benchmarks;
   if (opts.only) benchmarks = benchmarks.filter((b) => opts.only.includes(b.id));
+  // KHÔNG lọc danh sách ngôn ngữ theo registry khi đang chạy bằng agent: registry chỉ biết
+  // 8 ngôn ngữ gốc, còn agent có thể là `node26` — lọc ở đây thì mọi phiên bản đều bị loại
+  // sạch và lượt chạy chết ngay với "không còn ngôn ngữ nào". Việc lọc thuộc về executor,
+  // nơi biết danh sách agent thật.
+  // Do NOT filter the language list against the registry when running on agents: the
+  // registry knows only the eight base languages while an agent may be `node26`, so
+  // filtering here wiped every version out and killed the run outright. Filtering belongs to
+  // the executor, which knows the real agent list.
   let languages = registry.languages;
-  if (opts.langs) languages = languages.filter((l) => opts.langs.includes(l.id));
+  if (opts.langs && !process.env.LB_AGENTS) {
+    languages = languages.filter((l) => opts.langs.includes(l.id));
+    if (languages.length === 0) throw new Error('không còn ngôn ngữ nào sau khi lọc --langs');
+  }
   if (benchmarks.length === 0) throw new Error('không còn bài test nào sau khi lọc --only');
-  if (languages.length === 0) throw new Error('không còn ngôn ngữ nào sau khi lọc --langs');
 
   const runsFor = (b) => {
     if (opts.runs) return opts.runs;
@@ -123,22 +242,12 @@ export async function runSuite(opts, onEvent = () => {}) {
   }
 
   onEvent({ type: 'phase', phase: 'build' });
-  const toolchains = await buildAll({
-    root: ROOT,
-    registry: { ...registry, benchmarks },
-    onLog: (e) => onEvent({ type: 'log', ...e }),
-    only: new Set(languages.map((l) => l.id)),
-  });
-
-  const active = languages.filter((l) => toolchains[l.id]?.available);
-  for (const l of languages) {
-    if (!toolchains[l.id]?.available) {
-      onEvent({ type: 'unavailable', language: l.id, reason: toolchains[l.id]?.reason ?? 'không rõ' });
-    }
-  }
+  const exec = await makeExecutor({ registry, benchmarks, languages, opts, onEvent });
+  const active = exec.languages;
   if (active.length === 0) throw new Error('không có ngôn ngữ nào build được');
+  const failedFor = (langId, bid) => exec.failures[langId]?.[bid];
 
-  const total = benchmarks.reduce((acc, b) => acc + active.filter((l) => !toolchains[l.id].failures[b.id]).length, 0);
+  const total = benchmarks.reduce((acc, b) => acc + active.filter((l) => !failedFor(l.id, b.id)).length, 0);
   let done = 0;
   onEvent({ type: 'phase', phase: 'run', total });
 
@@ -149,18 +258,17 @@ export async function runSuite(opts, onEvent = () => {}) {
     const reps = runsFor(b);
     results[b.id] = { params: b.params ?? {}, runs: reps, warmup, checksums: {} };
 
-    const env = { LB_TMPDIR: process.env.LB_TMPDIR || (host.env === 'docker' ? '/tmp' : path.join(ROOT, 'build')) };
+    // Số luồng lấy từ hạn mức của container NGÔN NGỮ, không phải của container server.
+    // Thread count comes from the LANGUAGE container's limit, not the server's.
+    const params = paramArgs({ ...b.params, ...(b.id === 'parallel' ? { threads: exec.cores } : {}) });
 
     // Một chỗ giữ trạng thái cho mỗi ngôn ngữ, vì các lần đo của nó không còn liền nhau.
     // One slot of state per language, since its repetitions are no longer contiguous.
-    const slots = active.map((lang, li) => {
-      const tc = toolchains[lang.id];
-      if (tc.failures[b.id]) {
-        return { lang, li, failed: `build thất bại: ${tc.failures[b.id]}`, samples: [], wall: [], rssMax: null, checksum: null };
-      }
-      const { cmd, args } = tc.run(b.id, paramArgs({ ...b.params, ...(b.id === 'parallel' ? { threads: host.usableCores } : {}) }));
-      return { lang, li, cmd, args, failed: null, samples: [], wall: [], rssMax: null, checksum: null };
-    });
+    const slots = active.map((lang, li) => ({
+      lang, li,
+      failed: failedFor(lang.id, b.id) ? `build thất bại: ${failedFor(lang.id, b.id)}` : null,
+      samples: [], wall: [], rssMax: null, checksum: null,
+    }));
 
     const prog = (slot, run, phase) => onEvent({
       type: 'progress',
@@ -178,9 +286,9 @@ export async function runSuite(opts, onEvent = () => {}) {
       if (opts.signal?.aborted) break;
       if (slot.failed) continue;
       prog(slot, 0, 'warmup');
-      for (let w = 0; w < warmup; w++) {
-        const r = await measureOnce({ cmd: slot.cmd, args: slot.args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
-        if (r.error) { slot.failed = r.error; break; }
+      if (warmup > 0) {
+        const r = await exec.warmup(slot.lang.id, b, params, warmup);
+        if (r && r.ok === false) slot.failed = r.error;
       }
     }
 
@@ -207,13 +315,17 @@ export async function runSuite(opts, onEvent = () => {}) {
         if (opts.signal?.aborted) break;
         if (slot.failed) continue;
         prog(slot, i + 1, 'measure');
-        const r = await measureOnce({ cmd: slot.cmd, args: slot.args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
+        const r = await exec.measureOne(slot.lang.id, b, params);
         if (r.error) { slot.failed = r.error; continue; }
-        const ms = b.metric === 'wall' ? r.wallMs : r.internalMs;
+        const ms = r.ms;
         slot.samples.push(ms);
         slot.wall.push(r.wallMs);
         if (r.rssBytes != null) slot.rssMax = Math.max(slot.rssMax ?? 0, r.rssBytes);
         if (slot.checksum === null) slot.checksum = r.checksum;
+        // Với agent, mỗi vòng là một lời gọi riêng, nên phép kiểm này phải nằm ở runner —
+        // agent chỉ thấy được một vòng của chính nó.
+        // With agents each round is its own call, so this check has to live in the runner:
+        // an agent only ever sees the one round it was asked for.
         else if (slot.checksum !== r.checksum) { slot.failed = `checksum không ổn định giữa các lần chạy (${slot.checksum} rồi ${r.checksum})`; continue; }
         onEvent({
           type: 'sample',

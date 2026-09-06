@@ -11,13 +11,15 @@
 :root{
   --ground:#0B0E13; --stage:#0E1219; --hair:#222A36; --hair2:#2E3746;
   --text:#E7ECF3; --faint:#B4C0D0; --text2:var(--faint); --bad:#E0605F;
-  /* Vùng an toàn cho TikTok: đáy rộng nhất vì bị caption + thanh điều hướng che,
-     phải rộng nhì vì có cột nút tương tác, trên chừa cho thanh trạng thái.
-     Đủ để không mất chữ, không nới quá tay kẻo phí màn hình.
-     TikTok safe area: the bottom needs the most room (caption plus nav bar), the right
-     next (the action button column), the top clears the status bar. Enough that nothing
-     is covered, not so much that the screen is wasted. */
-  --safe-t:120px; --safe-r:120px; --safe-b:200px; --safe-l:80px;
+  /* Vùng an toàn TikTok, lấy theo số đo thật của giao diện chứ không ước lượng:
+     dưới 324px (caption + tên nhạc + nút), phải 164px (cột tim/bình luận/chia sẻ),
+     trên 140px (thanh hồ sơ và tai thỏ), trái 80px (không có nút, chỉ là lề).
+     Vùng dùng được còn 836 × 1456 — mọi thứ quan trọng phải nằm gọn trong đó.
+     TikTok safe area, from the interface's real measurements rather than a guess:
+     324px at the bottom (caption, sound credit, buttons), 164px on the right (the like,
+     comment and share column), 140px on top (profile bar and notch), 80px on the left,
+     where there is no UI, only margin. That leaves 836 x 1456 for everything that matters. */
+  --safe-t:140px; --safe-r:164px; --safe-b:324px; --safe-l:80px;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
   --sans:'Barlow Semi Condensed','Barlow',system-ui,-apple-system,sans-serif;
 }
@@ -36,12 +38,8 @@ body{height:100vh;overflow:hidden;}
   padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
   box-shadow:0 0 0 1px var(--hair), 0 40px 120px rgba(0,0,0,.6);}
 
-.rail{display:grid;gap:8px;flex:none;}
-.seg{height:10px;background:var(--hair);border-radius:2px;position:relative;overflow:hidden;}
-.seg i{position:absolute;inset:0;transform:scaleX(0);transform-origin:left;background:var(--text);border-radius:2px;
-  transition:transform .3s linear;}
 
-.now{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-top:30px;}
+.now{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:24px;}
 .now b{font-family:var(--mono);font-weight:800;font-size:56px;letter-spacing:-.02em;line-height:1;
   display:inline-flex;align-items:baseline;}
 .now b .dots{width:3ch;}
@@ -307,7 +305,6 @@ body{height:100vh;overflow:hidden;}
 <body>
 <div id="hint" data-on="0">click anywhere for sound</div>
 <div id="fit"><div id="stage">
-  <div class="rail" id="rail"></div>
   <div class="now"><b><span id="nowName">READY</span><span class="dots" id="nowDots">...</span></b><s id="nowMs"></s></div>
   <div class="sub"><span class="dot" id="subDot"></span><span class="txt"><span id="subTxt"></span><span class="dots" id="subDots">...</span></span><span class="cnt" id="subCnt"></span></div>
   <div class="board" id="board"></div>

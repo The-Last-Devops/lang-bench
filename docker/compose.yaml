@@ -1,44 +1,189 @@
-# Chạy: docker compose -f docker/compose.yaml run --rm bench
-# Run:  docker compose -f docker/compose.yaml run --rm bench
+# Mỗi ngôn ngữ một container, và mỗi PHIÊN BẢN cũng là một container.
+#
+# Trước đây một image duy nhất chứa cả 8 toolchain: thêm ngôn ngữ là dựng lại toàn bộ, và
+# không có cách nào chạy hai phiên bản của cùng một ngôn ngữ. Giờ thêm một ngôn ngữ hay một
+# phiên bản chỉ là thêm một khối bên dưới.
+#
+# One container per language — and per VERSION.
+#
+# A single image used to hold all eight toolchains: adding a language rebuilt everything,
+# and two versions of one language were impossible. Adding either is now just another block.
+#
+# Chạy / run:  docker compose -f docker/compose.yaml up -d
+#              mở http://localhost:8090/race.html
+
+x-limits: &limits
+  # HẠN MỨC PHẢI GIỐNG NHAU Ở MỌI NGÔN NGỮ, nếu không phép so sánh mất nghĩa: `parallel`
+  # đọc hạn mức này để quyết định mở bao nhiêu luồng. Sửa thì phải sửa cho tất cả — đó là
+  # lý do nó nằm ở một chỗ duy nhất.
+  # THE LIMITS MUST BE IDENTICAL FOR EVERY LANGUAGE or the comparison is void: `parallel`
+  # reads this limit to decide how many threads to open. Changing it means changing it for
+  # all of them, which is why it lives in exactly one place.
+  cpus: 3.0
+  mem_limit: 5g
+  memswap_limit: 5g
+
+x-agent: &agent
+  <<: *limits
+  restart: unless-stopped
+  working_dir: /bench
+  volumes:
+    - ../benchmarks:/bench/benchmarks
+    - ../runner:/bench/runner:ro
+  # Chỉ đo một ngôn ngữ tại một thời điểm, nên các container còn lại phải nằm im — đó là
+  # điều kiện để hạn mức CPU có ý nghĩa.
+  # Only one language is measured at a time, so the others must sit idle; that is what makes
+  # the CPU limit mean anything.
+
 services:
   bench:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     image: lang-bench:latest
+    <<: *limits
     working_dir: /bench
+    command: node server/index.mjs
+    environment:
+      # Ngôn ngữ nào được đo là do DÒNG NÀY quyết định, không phải do code. Bỏ một ngôn ngữ
+      # chỉ cần bỏ nó khỏi đây; service vẫn còn nguyên bên dưới, thêm lại là chạy tiếp.
+      # THIS LINE decides which languages are measured, not the code. Dropping one means
+      # taking it off this list; the service stays defined below, ready to come back.
+      LB_AGENTS: >-
+        node26=http://node26:8100,
+        node24=http://node24:8100,
+        node22=http://node22:8100,
+        node20=http://node20:8100
+      # Tạm bỏ, thêm lại vào LB_AGENTS ở trên là chạy:
+      # Temporarily out; put them back on LB_AGENTS above to run them:
+      #   cpp=http://cpp:8100, rust=http://rust:8100, go=http://go:8100
     volumes:
-      # Cho ghi, chỉ để runner lưu lại mốc của bài test mới vào reference.json.
-      # Writable purely so the runner can save new benchmarks' marks into reference.json.
       - ../benchmarks:/bench/benchmarks
       - ../runner:/bench/runner:ro
       - ../server:/bench/server:ro
       - ../web:/bench/web:ro
       - ../results:/bench/results
-      # Cache build: lượt chạy sau không phải biên dịch lại từ đầu.
-      # Build cache: later runs do not recompile everything from scratch.
-      - build-cache:/bench/build
-      - cargo-cache:/tmp/cargo-target
     ports:
       - "${LB_PORT:-8090}:8080"
-    # Số liệu chỉ so sánh được khi mọi lần chạy dùng đúng cùng hạn mức này.
-    # Numbers are only comparable when every run gets exactly these limits.
-    #
-    # 3 chứ không phải 4: VM của Docker có 6 CPU, chừa lại phần dư cho daemon và cho
-    # chính tiến trình web đang phục vụ dashboard. Lưu ý hạn mức này tính cho CẢ
-    # container — nó không "để dành" riêng một nhân cho server; server vẫn ăn chung
-    # 3 nhân này với runner. Muốn tách hẳn thì phải cho server một container riêng.
-    #
-    # 3 rather than 4: the Docker VM has 6 CPUs, so this leaves headroom for the daemon
-    # and for the web process serving the dashboard. Note the limit covers the WHOLE
-    # container — it does not reserve a core for the server, which still shares these
-    # three with the runner. Truly isolating it means giving the server its own container.
-    cpus: 3.0
-    mem_limit: 5g
-    # Không cho container bị swap ra ngoài — swap làm sai số liệu bộ nhớ.
-    # No swapping — swap would corrupt the memory numbers.
-    memswap_limit: 5g
+    depends_on: [node26, node24, node22, node20]
+
+  cpp:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/cpp.Dockerfile
+    image: lang-bench-cpp:latest
+    environment:
+      LB_KIND: cpp
+      LB_LANG: cpp
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-cpp:/build
+
+  rust:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/rust.Dockerfile
+    image: lang-bench-rust:latest
+    environment:
+      LB_KIND: rust
+      LB_LANG: rust
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-rust:/build
+
+  go:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/go.Dockerfile
+    image: lang-bench-go:latest
+    environment:
+      LB_KIND: go
+      LB_LANG: go
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-go:/build
+      - go-cache:/root/.cache/go-build
+
+  # Ba phiên bản Node chạy song song — thứ mà một image chung không làm được.
+  # 26 là current, 24 và 22 là LTS đang được dùng thật trong sản xuất.
+  # Three Node versions side by side, which one shared image could not do.
+  # 26 is current; 24 and 22 are the LTS lines actually running in production.
+  node26:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/node.Dockerfile
+      args:
+        NODE_VERSION: 26.8.1
+    image: lang-bench-node26:latest
+    environment:
+      LB_KIND: node
+      LB_LANG: node26
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-node26:/build
+
+  node24:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/node.Dockerfile
+      args:
+        NODE_VERSION: 24.20.0
+    image: lang-bench-node24:latest
+    environment:
+      LB_KIND: node
+      LB_LANG: node24
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-node24:/build
+
+  node20:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/node.Dockerfile
+      args:
+        NODE_VERSION: 20.20.2
+    image: lang-bench-node20:latest
+    environment:
+      LB_KIND: node
+      LB_LANG: node20
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-node20:/build
+
+  node22:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/node.Dockerfile
+      args:
+        NODE_VERSION: 22.23.2
+    image: lang-bench-node22:latest
+    environment:
+      LB_KIND: node
+      LB_LANG: node22
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-node22:/build
 
 volumes:
-  build-cache:
-  cargo-cache:
+  build-cpp:
+  build-rust:
+  build-go:
+  build-node26:
+  build-node24:
+  build-node22:
+  build-node20:
+  go-cache:

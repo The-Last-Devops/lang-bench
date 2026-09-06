@@ -3,16 +3,93 @@
 // The vertical 9:16 race screen. Points land the moment each measurement
 // arrives from the runner — nothing waits for the run to finish.
 
-const LANGS = [
+// Danh sách ngôn ngữ đến từ server (/api/languages), không viết cứng ở đây: mỗi service
+// trong docker-compose là một hàng trên màn hình, kể cả phiên bản thứ hai của cùng ngôn ngữ.
+// Bảng dưới chỉ là dự phòng khi chưa gọi được server.
+// The language list comes from the server (/api/languages) rather than living here: each
+// docker-compose service is a row on screen, second versions of a language included. The
+// table below is only the fallback for before the server answers.
+let LANGS = [
   { id: 'cpp', label: 'C++', color: '#4C8DFF' },
   { id: 'rust', label: 'Rust', color: '#F2703C' },
   { id: 'go', label: 'Go', color: '#2FCBDE' },
   { id: 'node', label: 'Node', color: '#8FD14F' },
 ];
-const LANG_IDS = LANGS.map((l) => l.id);
+let LANG_IDS = LANGS.map((l) => l.id);
+
+/* Bảng màu này là của MÀN HÌNH, không lấy từ registry: registry mang màu của dashboard cũ,
+   chọn cho nền sáng và đọc rất kém trên nền tối ở đây.
+   Ngôn ngữ registry chưa biết — node20 chẳng hạn — nhận màu dẫn xuất từ ngôn ngữ gốc, làm
+   sáng lên để phân biệt được. Trùng màu hệt nhau thì hai hàng thành một khối không đọc nổi.
+   This palette belongs to the SCREEN, not to the registry: the registry carries the old
+   dashboard's colours, picked for a light ground and barely legible on this dark one.
+   A language the registry has not seen — node20, say — takes a shade derived from its base,
+   lightened so the two can be told apart; identical colours would fuse two rows into one. */
+// C++ xanh dương, Rust cam, Go cyan — nên khoảng màu còn trống cho Node là xanh lá đến
+// vàng. Ba phiên bản Node lấy ba sắc TÁCH BIỆT trong khoảng đó, không phải ba mức đậm nhạt
+// của cùng một màu: đậm nhạt thì ở cỡ thumbnail và trên clip nén sẽ nhìn ra một khối.
+// C++ takes blue, Rust orange, Go cyan, which leaves green through yellow for Node. The
+// three Node versions take three SEPARATE hues in that range rather than three tints of one
+// colour: tints fuse into a single block at thumbnail size and through video compression.
+/* BỘ MÀU cố định, chọn sẵn cho nền tối.
+ *
+ * IDENTITY giữ màu nhận diện của các ngôn ngữ gốc — người xem đã quen C++ xanh dương, Rust
+ * cam. RAMP dành cho mọi thứ còn lại (node26, node24, …), gán theo THỨ TỰ xuất hiện nên bao
+ * nhiêu ngôn ngữ cũng luôn được màu tách bạch.
+ *
+ * Các màu trong RAMP cách xa nhau về SẮC, không phải về đậm nhạt. Lần trước tôi cho ba bản
+ * Node ba mức xanh–vàng và chúng dính vào nhau; qua nén video và ở cỡ thumbnail thì hai màu
+ * gần nhau đọc ra làm một.
+ *
+ * A fixed PALETTE, chosen for the dark ground.
+ *
+ * IDENTITY keeps the base languages' recognisable colours — viewers already read C++ as blue
+ * and Rust as orange. RAMP covers everything else (node26, node24, ...), assigned in ORDER of
+ * appearance, so any number of languages still comes out distinguishable.
+ *
+ * RAMP's colours are separated by HUE, not by lightness. The three Node versions were first
+ * given three green-to-yellow tints and they merged: through video compression and at
+ * thumbnail size, neighbouring colours read as one.
+ */
+const IDENTITY = {
+  cpp: '#4C8DFF', rust: '#F2703C', go: '#2FCBDE', node: '#8FD14F',
+  java: '#E0605F', php: '#9B8CFF', python: '#FFC94D', ruby: '#FF6B9D',
+};
+const RAMP = [
+  '#4ED17A', // xanh lá
+  '#FF9F45', // cam
+  '#B98CFF', // tím
+  '#37C5E8', // cyan
+  '#FF6B9D', // hồng
+  '#E8D44D', // vàng
+  '#7C9BFF', // xanh tím
+  '#4ECDB0', // ngọc
+];
+
+function lighten(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c) => Math.round(c + (255 - c) * amount);
+  return '#' + [mix(n >> 16), mix((n >> 8) & 255), mix(n & 255)]
+    .map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+function assignColors(list) {
+  let next = 0;
+  return list.map((l) => IDENTITY[l.id] ?? RAMP[next++ % RAMP.length]);
+}
+
+// 'node26' → 'Node 26'; 'Node.js' → 'Node'. Tên dài làm hàng bị chật, mà cỡ chữ rất lớn.
+// 'node26' -> 'Node 26'; 'Node.js' -> 'Node'. Long names crowd the row, and the type is large.
+function shortLabel(l) {
+  const m = /^([a-z+]+?)(\d+)$/.exec(l.id);
+  if (m) return cap(m[1]) + ' ' + m[2];
+  if (l.id === 'node') return 'Node';
+  return (l.name || l.id).replace(/\.js$/, '');
+}
+const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
 const $ = (id) => document.getElementById(id);
-const stage = $('stage'), rail = $('rail'), wins = $('wins'), board = $('board');
+const stage = $('stage'), wins = $('wins'), board = $('board');
 const nowName = $('nowName'), nowMs = $('nowMs'), footEnv = $('footEnv'), go = $('go'), clock = $('clock');
 const clr = $('clr'), tip = $('tip'), gate = $('gate'), gateLangs = $('gateLangs');
 const gateLead = $('gateLead');
@@ -192,7 +269,7 @@ const dMs = {}, dMsTo = {};       // thời gian median vòng này
 const dRatio = {};                // bội số so với người nhanh nhất
 const twScore = {}, twGain = {}, twMs = {};
 let noteUntil = 0;                // kết quả vòng hiện tới lúc nào
-let segs = [], winEls = [], rows = [];
+let winEls = [], rows = [];
 let running = false, dead = new Set();
 let startedAt = 0, elapsedMs = 0;   // đồng hồ giây cạnh nút Run / the seconds clock beside Run
 
@@ -205,14 +282,8 @@ for (const l of LANGS) {
 /* ── dựng khung xương một lần, sau khi biết có bao nhiêu bài test ── */
 function build() {
   const cols = 'repeat(' + benches.length + ',1fr)';
-  rail.style.gridTemplateColumns = cols;
   wins.style.gridTemplateColumns = cols;
 
-  segs = benches.map(() => {
-    const d = document.createElement('div');
-    d.className = 'seg'; d.innerHTML = '<i></i>';
-    rail.appendChild(d); return d.firstChild;
-  });
   winEls = benches.map((id, i) => {
     const d = document.createElement('div');
     d.className = 'win';
@@ -371,10 +442,21 @@ function tick() {
 
 /* ── nạp cấu hình ── */
 async function boot() {
-  const [registry, reference] = await Promise.all([
+  const [registry, reference, langs] = await Promise.all([
     fetch('/api/registry').then((r) => r.json()),
     fetch('/api/reference').then((r) => r.json()),
+    fetch('/api/languages').then((r) => r.json()).catch(() => null),
   ]);
+  if (langs?.languages?.length) {
+    const colors = assignColors(langs.languages);
+    LANGS = langs.languages.map((l, i) => ({ id: l.id, label: shortLabel(l), color: colors[i], v: version(l.version) }));
+    LANG_IDS = LANGS.map((l) => l.id);
+    for (const l of LANGS) {
+      target[l.id] = 0; provMs[l.id] = null; buf[l.id] = []; shown[l.id] = 0;
+      dGain[l.id] = dGainTo[l.id] = dMs[l.id] = dMsTo[l.id] = 0; dRatio[l.id] = '';
+      twScore[l.id] = tween(0); twGain[l.id] = tween(0); twMs[l.id] = tween(0);
+    }
+  }
   benches = registry.benchmarks.map((b) => b.id);
   // Số bài lấy từ registry chứ không viết cứng: thêm bài là câu này tự đúng theo.
   // The count comes from the registry, never hard-coded: add a benchmark and it follows.
@@ -383,10 +465,10 @@ async function boot() {
   refMs = reference.refMs;
   build();
 
-  fillGateLangs(null);
+  fillGateLangs();
   fetch('/api/host').then((r) => r.json()).then(({ host }) => {
-    footEnv.textContent = [host.env, host.usableCores + ' cores', host.arch].join(' · ').toUpperCase();
-    fillGateLangs(host.toolchains);
+    const cores = langs?.languages?.[0]?.cores ?? host.usableCores;
+    footEnv.textContent = [host.env, cores + ' cores', host.arch].join(' · ').toUpperCase();
   }).catch(() => {});
 
   updateClear();
@@ -434,12 +516,11 @@ function setGate(on) {
 // bảng màu tự đúng theo, không có chỗ nào để lệch.
 // The legend is built from LANGS rather than written into the HTML: add or drop a language
 // and it follows automatically, with nowhere left to fall out of sync.
-function fillGateLangs(toolchains) {
-  gateLangs.innerHTML = LANGS.map((l) => {
-    const v = toolchains ? version(toolchains[l.id]) : '';
-    return '<div><i style="background:' + l.color + '"></i>' + l.label +
-      (v ? '<b>' + v + '</b>' : '') + '</div>';
-  }).join('');
+function fillGateLangs() {
+  gateLangs.innerHTML = LANGS.map((l) =>
+    '<div><i style="background:' + l.color + '"></i>' + l.label +
+    (l.v ? '<b>' + l.v + '</b>' : '') + '</div>'
+  ).join('');
 }
 
 // Lấy đúng số phiên bản khỏi dòng --version. Mỗi toolchain in một kiểu khác nhau, nhưng
@@ -486,7 +567,6 @@ function reset() {
   });
   setSub('', '', false);
   setNow(null, running);
-  segs.forEach((s) => (s.style.transform = 'scaleX(0)'));
   winEls.forEach((el) => { el.style.background = ''; el.style.transform = ''; el.style.opacity = ''; delete el.dataset.new; });
   hideTip();
   rows.forEach((r) => { r.delta.style.opacity = 0; r.delta.textContent = ''; });
@@ -649,44 +729,45 @@ function refFor(bench) {
 // A derived mark drops as faster languages report, and every point already awarded for
 // that benchmark has to move with it — an accumulated total could not be corrected.
 /**
- * Điểm tổng = 1000 × TRUNG BÌNH NHÂN của (mốc / median) trên các bài đã đo.
+ * Điểm tổng = TỔNG của (1000 × mốc / median) trên các bài đã đo.
  *
- * Trước đây là phép CỘNG các điểm từng bài, và phép cộng tự đặt trọng số mà không ai chọn:
- * bài nào cả bốn ngôn ngữ chạy nhanh hơn mốc thì ai cũng được trên 1000 và bài đó tự nặng
- * lên. Thực tế `startup` chiếm 16% tổng điểm còn `matmul` chỉ 2.8% — gấp gần sáu lần, chỉ
- * vì mốc của chúng đặt lệch nhau.
+ * Từng thử trung bình nhân — đúng hơn về thống kê, và thứ hạng không phụ thuộc việc chọn
+ * mốc nào. Nhưng trung bình nhân là một giá trị TRUNG BÌNH: bài nào một ngôn ngữ làm tệ
+ * hơn mức trung bình của chính nó sẽ kéo trung bình xuống, nên điểm tụt ngay giữa lượt
+ * chạy. Trên màn hình đua thì đó là điều không giải thích nổi.
  *
- * Trung bình nhân cho mỗi bài trọng số ĐÚNG BẰNG NHAU, và thứ hạng không phụ thuộc vào việc
- * chọn mốc nào — kết quả kinh điển của Fleming & Wallace (1986). Đây cũng là cách SPEC tính.
- * Mốc vẫn cố định nên điểm vẫn không có trần: máy mạnh hơn vẫn được điểm cao hơn.
+ * Vấn đề trọng số thật ra nằm ở MỐC, không ở phép cộng: khi mốc được đo đúng thì mốc chính
+ * là median nhanh nhất, mọi tỉ lệ nằm trong 0–1, mỗi bài đóng góp nhiều nhất 1000 điểm, và
+ * phép cộng tự khắc cân. `file-io` từng cho cả bốn ngôn ngữ trên 1000 điểm — đó là mốc sai,
+ * không phải phép cộng sai.
  *
- * Overall = 1000 x the GEOMETRIC MEAN of (reference / median) over the benchmarks measured.
+ * Overall = the SUM of (1000 x mark / median) over the benchmarks measured.
  *
- * This used to SUM the per-benchmark points, and summing imposes a weighting nobody chose:
- * a benchmark where all four beat the reference hands everyone over 1000 and thereby weighs
- * more. In practice `startup` was 16% of the total and `matmul` 2.8% — nearly six times the
- * pull, purely because their marks sat at different places.
+ * A geometric mean was tried — more defensible statistically, and its ranking does not
+ * depend on which reference was chosen. But a geometric mean is an AVERAGE: a benchmark a
+ * language handles worse than its own average drags that average down, so the score falls
+ * mid-run. On a race screen that is unexplainable.
  *
- * A geometric mean weighs every benchmark EQUALLY, and its ranking does not depend on which
- * reference was picked — the classic Fleming & Wallace (1986) result. It is what SPEC does.
- * The marks stay fixed, so the score still has no ceiling: a faster machine still scores higher.
+ * The weighting problem was really in the MARKS, not the addition: with marks measured
+ * properly the mark IS the fastest median, every ratio lands in 0-1, each benchmark
+ * contributes at most 1000, and the sum balances itself. `file-io` handing all four
+ * languages over 1000 points was a wrong mark, not wrong arithmetic.
  */
 function totalFor(lang) {
-  let logSum = 0, n = 0;
+  let sum = 0;
   for (const bench of Object.keys(mid)) {
     const ref = refFor(bench);
     const ms = mid[bench][lang];
-    if (ref && ms > 0) { logSum += Math.log(ref / ms); n += 1; }
+    if (ref && ms > 0) sum += Math.round(1000 * ref / ms);
   }
-  // Bài đang đo dở góp một tỉ lệ tạm, để điểm nhích ngay chứ không đứng im tới cuối bài.
-  // The in-flight benchmark contributes a provisional ratio, so the score moves now rather
-  // than sitting still until the benchmark ends.
+  // Bài đang đo dở góp điểm tạm, để số nhích ngay chứ không đứng im tới cuối bài.
+  // The in-flight benchmark contributes provisionally, so the score moves now.
   const p = provMs[lang];
   if (p && !(mid[p.bench] && mid[p.bench][lang])) {
     const ref = refFor(p.bench);
-    if (ref && p.ms > 0) { logSum += Math.log(ref / p.ms); n += 1; }
+    if (ref && p.ms > 0) sum += Math.round(1000 * ref / p.ms);
   }
-  return n ? Math.round(1000 * Math.exp(logSum / n)) : 0;
+  return sum;
 }
 
 function rescore() {
@@ -750,7 +831,6 @@ function onMeasurement(e) {
   const need = LANG_IDS.filter((id) => !dead.has(id)).length;
   const have = Object.keys(pts[benchmark]).length;
   if (i >= 0) {
-    segs[i].style.transform = 'scaleX(' + Math.min(1, have / need) + ')';
     if (have >= need) {
       const winner = LANGS.reduce((a, b) => ((pts[benchmark][b.id] ?? -1) > (pts[benchmark][a.id] ?? -1) ? b : a));
       winEls[i].style.background = winner.color;
