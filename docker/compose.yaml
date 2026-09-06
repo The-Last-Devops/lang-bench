@@ -8,7 +8,9 @@ services:
     image: lang-bench:latest
     working_dir: /bench
     volumes:
-      - ../benchmarks:/bench/benchmarks:ro
+      # Cho ghi, chỉ để runner lưu lại mốc của bài test mới vào reference.json.
+      # Writable purely so the runner can save new benchmarks' marks into reference.json.
+      - ../benchmarks:/bench/benchmarks
       - ../runner:/bench/runner:ro
       - ../server:/bench/server:ro
       - ../web:/bench/web:ro

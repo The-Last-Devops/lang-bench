@@ -1,22 +1,20 @@
-// matmul — nhân ma trận N×N kiểu ngây thơ, đo thông lượng số thực và cache.
-// matmul — naive N×N matrix multiply, measuring float throughput and cache behaviour.
+// matmul — nhân ma trận N×N kiểu ngây thơ trên số nguyên 64-bit, đo thông lượng vòng
+// lặp chặt và hành vi cache. Xem ghi chú trong main.cpp về lý do bỏ f64.
+// matmul — naive N×N matrix multiply over 64-bit integers, measuring tight-loop
+// throughput and cache behaviour. See main.cpp for why f64 was dropped.
 package main
 
-import (
-	"math"
-
-	"langbench/gocommon"
-)
+import "langbench/gocommon"
 
 func main() {
 	n := int(common.Param("n", 256))
-	a := make([]float64, n*n)
-	b := make([]float64, n*n)
-	c := make([]float64, n*n)
+	a := make([]int64, n*n)
+	b := make([]int64, n*n)
+	c := make([]int64, n*n)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
-			a[i*n+j] = float64((i*31 + j*17) % 100)
-			b[i*n+j] = float64((i*13 + j*7) % 100)
+			a[i*n+j] = int64((i*31 + j*17) % 100)
+			b[i*n+j] = int64((i*13 + j*7) % 100)
 		}
 	}
 
@@ -29,13 +27,13 @@ func main() {
 			}
 		}
 	}
-	sum := 0.0
+	var sum uint64
 	for _, v := range c {
-		sum += v
+		sum += uint64(v)
 	}
 	ms := t.Ms()
 
 	ck := common.NewChecksum()
-	ck.Add(uint32(math.Mod(sum, 4294967296.0)))
+	ck.AddU64(sum)
 	common.Report(ms, ck.Hex())
 }

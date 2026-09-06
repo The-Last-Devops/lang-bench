@@ -268,6 +268,24 @@
       ]
     },
     {
+      "id": "sort-objects",
+      "group": "B",
+      "runs": 3,
+      "params": {
+        "n": 400000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "sắp xếp 400k bản ghi",
+        "desc": "Sắp xếp qua hàm so sánh trên bản ghi — lộ chi phí gọi hàm so sánh."
+      },
+      "en": {
+        "title": "sorting 400k records",
+        "desc": "Sorting records through a comparator — exposes the cost of the comparison call."
+      },
+      "notes": []
+    },
+    {
       "id": "alloc-gc",
       "group": "B",
       "runs": 5,
@@ -343,6 +361,42 @@
           "en": "std::regex is famously slow. It is what the standard library ships, not the best C++ can do."
         }
       ]
+    },
+    {
+      "id": "base64",
+      "group": "C",
+      "runs": 5,
+      "params": {
+        "size": 3000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "base64 3 MB",
+        "desc": "Mã hoá rồi giải mã, tự viết tay: dịch bit và tra bảng trên mảng byte."
+      },
+      "en": {
+        "title": "base64, 3 MB",
+        "desc": "Encode then decode, hand-written: bit shifts and table lookups over byte arrays."
+      },
+      "notes": []
+    },
+    {
+      "id": "string-build",
+      "group": "C",
+      "runs": 5,
+      "params": {
+        "n": 400000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "dựng chuỗi 400k mảnh",
+        "desc": "Nối chuỗi và định dạng số — việc code thật làm nhiều nhất."
+      },
+      "en": {
+        "title": "string building, 400k pieces",
+        "desc": "Appending and number formatting — the thing real code does most."
+      },
+      "notes": []
     },
     {
       "id": "crypto-hash",

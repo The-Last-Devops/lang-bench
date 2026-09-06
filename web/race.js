@@ -14,6 +14,8 @@ const LANG_IDS = LANGS.map((l) => l.id);
 const $ = (id) => document.getElementById(id);
 const stage = $('stage'), rail = $('rail'), wins = $('wins'), board = $('board');
 const nowName = $('nowName'), nowMs = $('nowMs'), footEnv = $('footEnv'), go = $('go'), clock = $('clock');
+const clr = $('clr'), tip = $('tip'), gate = $('gate'), gateLangs = $('gateLangs');
+const gateLead = $('gateLead');
 const subDot = $('subDot'), subTxt = $('subTxt'), subCnt = $('subCnt');
 const nowDots = $('nowDots'), subDots = $('subDots');
 
@@ -131,8 +133,38 @@ function sfxRank(p) {
   beep({ freq: RANK_HZ[p] || 523.3, dur: 0.22, gain: 0.3 });
   if (p === 1) [784, 1046.5, 1568].forEach((f, i) => beep({ freq: f, dur: 0.32, type: 'sine', gain: 0.22, delay: i * 0.09 }));
 }
-const sfxTick = () => beep({ freq: 180 + Math.random() * 40, dur: 0.035, type: 'square', gain: 0.075 });
+/* Tiếng điểm tăng. Bản cũ là sóng vuông 180–220Hz lặp mỗi 55ms: sóng vuông nhiều hài bậc
+   cao nên rè, quãng trầm lại lặp dày, nghe một phút là mệt tai.
+   Giờ dùng thang NGŨ CUNG — thang này không chứa quãng nghịch, nên phát nốt theo bất kỳ
+   thứ tự nào cũng không bao giờ chỏi, kể cả khi bốn ngôn ngữ cùng ăn điểm dồn dập. Nốt đi
+   lên dần rồi vòng lại, cho cảm giác leo thang thay vì gõ đều một chỗ. Sóng sin, nhỏ, tắt mềm.
+
+   The points-climbing sound. It used to be a 180-220Hz square wave every 55ms: square waves
+   are rich in high harmonics and buzz, and a low note repeating that densely wears the ear
+   out within a minute.
+   Now it walks a PENTATONIC scale — a scale with no dissonant intervals, so notes can land
+   in any order and never clash, even when all four languages score at once. They climb and
+   wrap, which reads as ascending rather than tapping one spot. Sine, quiet, soft release. */
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+let tickStep = 0;
+const sfxTick = () => {
+  const f = PENTA[tickStep % PENTA.length];
+  tickStep += 1;
+  beep({ freq: f, dur: 0.11, type: 'sine', gain: 0.05 });
+  // Quãng tám trên rất khẽ: thêm chút lấp lánh chứ không thành nốt thứ hai.
+  // A very quiet octave above: sparkle on the note, not a second note.
+  beep({ freq: f * 2, dur: 0.07, type: 'sine', gain: 0.014 });
+};
 const sfxBlip = () => beep({ freq: 660, dur: 0.07, type: 'sine', gain: 0.16 });
+// Tiếng bấm Run: hai nốt đi lên, dứt khoát — báo lượt chạy đã bắt đầu thật, vì sau cú
+// bấm là vài giây build im lìm chưa có gì để nhìn.
+// The Run press: two rising notes, decisive — it confirms the run really started, since
+// the click is followed by seconds of quiet building with nothing yet to see.
+function sfxStart() {
+  [523.3, 784].forEach((f, i) =>
+    beep({ freq: f, dur: 0.16, type: 'triangle', gain: 0.26, delay: i * 0.07 }));
+}
+
 function sfxDone() {
   [523.3, 659.3, 784, 1046.5].forEach((f, i) => beep({ freq: f, dur: 0.5, type: 'sine', gain: 0.24, delay: i * 0.13 }));
 }
@@ -182,9 +214,13 @@ function build() {
     d.className = 'seg'; d.innerHTML = '<i></i>';
     rail.appendChild(d); return d.firstChild;
   });
-  winEls = benches.map(() => {
+  winEls = benches.map((id, i) => {
     const d = document.createElement('div');
-    d.className = 'win'; wins.appendChild(d); return d;
+    d.className = 'win';
+    d.addEventListener('pointerenter', () => showTip(i, d));
+    d.addEventListener('pointerleave', hideTip);
+    wins.appendChild(d);
+    return d;
   });
 
   rows = LANGS.map((l) => {
@@ -228,6 +264,50 @@ function build() {
   layout();
 }
 
+/* ── bảng chi tiết khi rê chuột lên một ô thắng ── */
+
+// Toạ độ tính trong hệ của CHÍNH stage, không dùng toạ độ màn hình: stage đang bị transform
+// scale để vừa khung nhìn, nên getBoundingClientRect trả về pixel đã thu nhỏ và đặt bảng
+// theo đó sẽ lệch đúng bằng tỉ lệ thu phóng.
+// Positions are computed in the stage's OWN coordinate system, never screen coordinates:
+// the stage is transform-scaled to fit, so getBoundingClientRect returns shrunken pixels
+// and placing the panel by them would be off by exactly the zoom factor.
+function showTip(i, el) {
+  const id = benches[i];
+  const p = pts[id] || {};
+  const m = mid[id] || {};
+  const f = failed[id] || {};
+  if (!Object.keys(p).length && !Object.keys(f).length) return;
+
+  const best = Math.max(...LANGS.map((l) => p[l.id] ?? -1));
+  const rows = LANGS.map((l) => {
+    const isWin = p[l.id] !== undefined && p[l.id] === best;
+    const score = f[l.id] ? 'FAIL' : p[l.id] !== undefined ? fmt(p[l.id]) : '—';
+    const ms = f[l.id] ? '' : m[l.id] !== undefined ? m[l.id].toFixed(1) + ' ms' : '';
+    return '<tr data-win="' + (isWin ? '1' : '0') + '">' +
+      '<td class="c"><i style="background:' + l.color + '"></i></td>' +
+      '<td class="n">' + l.label.toUpperCase() + '</td>' +
+      '<td class="p">' + score + '</td>' +
+      '<td class="m">' + ms + '</td></tr>';
+  }).join('');
+
+  const ref = refMs[id] ? '<em>' + refMs[id].toFixed(1) + ' ms = 1000</em>' : '';
+  tip.innerHTML = '<h4>' + id.toUpperCase() + ' ' + ref + '</h4><table>' + rows + '</table>';
+  tip.hidden = false;
+
+  // Neo vào giữa ô, nằm trên dải chấm, kẹp trong lề của stage.
+  // Anchored to the square's centre, above the strip, clamped inside the stage padding.
+  const pad = 72;
+  const cx = wins.offsetLeft + el.offsetLeft + el.offsetWidth / 2;
+  const w = tip.offsetWidth;
+  let left = cx - w / 2;
+  left = Math.max(pad, Math.min(left, stage.clientWidth - pad - w));
+  tip.style.left = left + 'px';
+  tip.style.top = (wins.offsetTop - tip.offsetHeight - 18) + 'px';
+}
+
+function hideTip() { tip.hidden = true; }
+
 /* ── xếp hạng + vẽ ── */
 function layout() {
   const order = [...rows].sort((a, b) => target[b.id] - target[a.id]);
@@ -257,23 +337,22 @@ function tick() {
   const now = performance.now();
   let moving = false, climbing = false;
   for (const id of LANG_IDS) {
-    const before = twScore[id].v;
     if (tweenStep(twScore[id], now)) moving = true;
     shown[id] = twScore[id].v;
-    // Tích tắc thưa theo mức điểm nhích được, không phải theo frame — nếu theo frame
-    // thì 60 tiếng mỗi giây, chói tai.
-    // Ticks are spaced by how far the score moved, not per frame: per frame would be
-    // sixty of them a second.
-    if (shown[id] - before > 0.5) climbing = true;
+    // Còn điểm CHƯA giao xong thì coi là đang leo — không hỏi frame này nhích bao nhiêu.
+    // Ngưỡng cũ 0.5/frame làm mọi lượt cộng nhỏ bị câm: tween kéo 820ms ≈ 50 frame, nên
+    // +20 điểm chỉ nhích 0.4 mỗi frame và không bao giờ chạm ngưỡng.
+    // Climbing means points are still undelivered — never how far this frame moved. The old
+    // 0.5-per-frame threshold silenced every small gain: the tween runs 820ms ≈ 50 frames,
+    // so +20 points moves 0.4 a frame and never reaches it.
+    if (target[id] - shown[id] > 0.01) climbing = true;
     tweenStep(twGain[id], now); dGain[id] = twGain[id].v;
     tweenStep(twMs[id], now);   dMs[id] = twMs[id].v;
   }
 
-  // Điểm đang bò lên thì rải tiếng tích tắc đều theo thời gian. Cách cũ đo mức
-  // nhích mỗi frame nên những lượt cộng nhỏ không bao giờ chạm ngưỡng — im tiếng.
-  // While any score climbs, ticks are spaced by time. The old rule measured the
-  // per-frame step, so small gains never reached the threshold and stayed silent.
-  if (sound && climbing && now - lastTick > 55) { lastTick = now; sfxTick(); }
+  // Đang leo thì rải tiếng đều theo thời gian, bất kể leo nhanh hay chậm.
+  // While climbing, ticks are spaced by time — the same whether the climb is fast or slow.
+  if (sound && climbing && now - lastTick > 90) { lastTick = now; sfxTick(); }
 
   // Kết quả vòng chỉ đứng lại một nhịp rồi nhường chỗ cho vòng sau.
   // A round's result holds for a beat, then clears the way for the next one.
@@ -298,18 +377,79 @@ async function boot() {
     fetch('/api/reference').then((r) => r.json()),
   ]);
   benches = registry.benchmarks.map((b) => b.id);
+  // Số bài lấy từ registry chứ không viết cứng: thêm bài là câu này tự đúng theo.
+  // The count comes from the registry, never hard-coded: add a benchmark and it follows.
+  gateLead.textContent =
+    `Bài kiểm tra hiệu năng của ${LANGS.length} ngôn ngữ lập trình, qua ${benches.length} bài test.`;
   refMs = reference.refMs;
   build();
 
+  fillGateLangs(null);
   fetch('/api/host').then((r) => r.json()).then(({ host }) => {
     footEnv.textContent = [host.env, host.usableCores + ' cores', host.arch].join(' · ').toUpperCase();
+    fillGateLangs(host.toolchains);
   }).catch(() => {});
 
+  updateClear();
   const status = await fetch('/api/status').then((r) => r.json());
   if (status.running && (!ac || ac.state !== 'running')) showHint(true);
   setRunning(status.running);
+  // F5 giữa lượt chạy thì đừng che kết quả đang chạy bằng popup.
+  // Reloading mid-run must not cover the live results with the panel.
+  setGate(!status.running);
   connect();
   requestAnimationFrame(tick);
+}
+
+// Nút Xoá chỉ có nghĩa khi màn hình đang mang dữ liệu — điểm đã lên, hoặc lượt chạy đã đi
+// được vài phép đo. Sau F5 giữa lượt chạy thì điều kiện này vẫn đúng, nên nút vẫn có mặt.
+// Clear only means anything while the screen carries data — points on the board, or a run
+// some measurements in. That still holds after a reload mid-run, so the button is there.
+// Một nút, hai việc, theo trạng thái: đang chạy thì là STOP, rảnh thì là CLEAR.
+//
+// Luôn hiện. Bản trước ẩn nó khi màn hình chưa có dữ liệu, nhưng điều kiện đó chỉ được
+// soát lại ở vài thời điểm nhất định, nên có lúc nút xuất hiện muộn và phải F5 mới thấy.
+// Một nút cố định ở một chỗ cố định thì không bao giờ sai — và Clear lúc màn hình đã sạch
+// cũng chẳng hại gì.
+//
+// One button, two jobs by state: STOP while running, CLEAR while idle.
+//
+// Always visible. It used to hide when the screen held no data, but that condition was
+// only re-checked at certain moments, so the button could show up late and take a reload
+// to appear. A button that is always in the same place cannot get this wrong — and Clear
+// on an already-clean screen does no harm.
+function updateClear() {
+  clr.textContent = running ? 'Stop' : 'Clear';
+  clr.dataset.stop = running ? '1' : '0';
+}
+
+// Popup là cửa vào duy nhất: mở khi màn hình đang rảnh, đóng suốt lượt chạy, Clear thì mở
+// lại. Vòng lặp là popup → chạy → kết quả → Clear → popup.
+// The panel is the only way in: open while the screen is idle, closed for the whole run,
+// reopened by Clear. The loop is panel → run → results → Clear → panel.
+function setGate(on) {
+  gate.hidden = !on;
+}
+
+// Dựng bảng màu từ chính LANGS, không viết cứng trong HTML: thêm hay bỏ một ngôn ngữ thì
+// bảng màu tự đúng theo, không có chỗ nào để lệch.
+// The legend is built from LANGS rather than written into the HTML: add or drop a language
+// and it follows automatically, with nowhere left to fall out of sync.
+function fillGateLangs(toolchains) {
+  gateLangs.innerHTML = LANGS.map((l) => {
+    const v = toolchains ? version(toolchains[l.id]) : '';
+    return '<div><i style="background:' + l.color + '"></i>' + l.label +
+      (v ? '<b>' + v + '</b>' : '') + '</div>';
+  }).join('');
+}
+
+// Lấy đúng số phiên bản khỏi dòng --version. Mỗi toolchain in một kiểu khác nhau, nhưng
+// số phiên bản luôn là chuỗi số-chấm-số đầu tiên, nên một biểu thức là đủ cho cả bốn.
+// Pull the version number out of a --version line. Every toolchain prints a different
+// shape, but the version is always the first digit-dot-digit run, so one pattern covers all.
+function version(line) {
+  const m = /(\d+\.\d+(?:\.\d+)?)/.exec(line || '');
+  return m ? m[1] : '';
 }
 
 function setRunning(on) {
@@ -319,6 +459,7 @@ function setRunning(on) {
   if (!on) startedAt = 0;
   running = on;
   go.disabled = on;
+  updateClear();
   go.textContent = on ? 'Running' : 'Run';
 }
 
@@ -335,6 +476,7 @@ function reset() {
   for (const k of Object.keys(failed)) delete failed[k];
   doneCount = 0; totalCount = 0;
   noteUntil = 0;
+  tickStep = 0;
   for (const id of LANG_IDS) { dGain[id] = dGainTo[id] = dMs[id] = dMsTo[id] = 0; dRatio[id] = ''; }
   rows.forEach((r) => {
     r.el.dataset.win = '0';
@@ -347,9 +489,11 @@ function reset() {
   setNow(null, running);
   segs.forEach((s) => (s.style.transform = 'scaleX(0)'));
   winEls.forEach((el) => { el.style.background = ''; el.style.transform = ''; el.style.opacity = ''; delete el.dataset.new; });
+  hideTip();
   rows.forEach((r) => { r.delta.style.opacity = 0; r.delta.textContent = ''; });
   nowMs.textContent = '';
   draw(); layout();
+  updateClear();
 }
 
 
@@ -376,6 +520,12 @@ function en(msg) {
 /* The status line: fills the dead air between measurements. */
 // Trạng thái chỉ sống ở hàng đang được đo; các hàng khác tắt.
 // The live status lives only in the row being measured; every other row goes dark.
+// Cắt cho vừa hàng, giữ nguyên phần đầu vì đó là phần mang thông tin.
+// Bounded to fit the row, keeping the head of the string where the meaning is.
+function clip(text, max) {
+  return text.length > max ? text.slice(0, max - 1) + '…' : text;
+}
+
 function setStat(langId, html) {
   // Kết quả vòng đang chiếm hàng thì im lặng. Gọi setStat(null) một lần lúc kết quả bật
   // lên là chưa đủ: bài test kế tiếp bắn 'progress' ngay sau đó và ghi đè trạng thái
@@ -468,6 +618,54 @@ function revealRound(benchId, winner) {
   noteUntil = Date.now() + ROUND_MS;
 }
 
+/**
+ * Mốc dùng để chấm điểm một bài.
+ *
+ * Có trong reference.json thì dùng — đó là mốc cố định, giữ cho điểm so sánh được giữa
+ * các lượt chạy và giữa các máy. CHƯA có thì suy ra từ chính lượt chạy này: lấy median
+ * nhanh nhất trong các ngôn ngữ, đúng cách 12 mốc gốc đã được tạo ra.
+ *
+ * Nhờ vậy MỌI bài đã chạy đều được tính điểm. Trước đây thiếu mốc là bài đó bị bỏ qua
+ * lặng lẽ — chạy tốn thời gian thật mà không đóng góp gì vào bảng.
+ *
+ * The reference a benchmark is scored against.
+ *
+ * Use reference.json when it has one: that fixed mark is what keeps scores comparable
+ * across runs and machines. When it does not, derive one from this run — the fastest
+ * median across the languages, exactly how the original twelve marks were produced.
+ *
+ * So EVERY benchmark that runs is scored. A missing mark used to make a benchmark skip
+ * silently: it cost real time and contributed nothing to the board.
+ */
+function refFor(bench) {
+  if (refMs[bench]) return refMs[bench];
+  const seen = Object.values(mid[bench] || {});
+  return seen.length ? Math.min(...seen) : 0;
+}
+
+// Điểm chốt luôn được dựng LẠI từ các median đã đo, không cộng dồn.
+// Một mốc suy ra sẽ giảm dần khi có ngôn ngữ nhanh hơn báo về, và mọi điểm đã trao cho
+// bài đó phải đổi theo — cộng dồn thì không sửa lại được.
+// Settled points are always REBUILT from the medians, never accumulated.
+// A derived mark drops as faster languages report, and every point already awarded for
+// that benchmark has to move with it — an accumulated total could not be corrected.
+function rescore() {
+  for (const id of LANG_IDS) settled[id] = 0;
+  for (const bench of Object.keys(mid)) {
+    const ref = refFor(bench);
+    if (!ref) continue;
+    for (const [lang, ms] of Object.entries(mid[bench])) {
+      const p = Math.round(1000 * ref / ms);
+      (pts[bench] ??= {})[lang] = p;
+      if (settled[lang] !== undefined) settled[lang] += p;
+    }
+  }
+  for (const id of LANG_IDS) {
+    target[id] = settled[id] + prov[id];
+    tweenTo(twScore[id], target[id], TW_SCORE);
+  }
+}
+
 function onMeasurement(e) {
   const { benchmark, language, stats } = e;
   if (!LANG_IDS.includes(language)) return;
@@ -486,18 +684,12 @@ function onMeasurement(e) {
     return;
   }
 
-  if (!refMs[benchmark]) {
-    setSub('no reference for ' + benchmark, '', false);
-    return;
-  }
-  const gained = Math.round(1000 * refMs[benchmark] / stats.median);
-  (pts[benchmark] ??= {})[language] = gained;
+  updateClear();
   (mid[benchmark] ??= {})[language] = stats.median;
-  settled[language] += gained;
   prov[language] = 0;
   buf[language] = [];
-  target[language] = settled[language];
-  tweenTo(twScore[language], target[language], TW_SCORE);
+  rescore();
+  const gained = pts[benchmark][language];
   sfxBlip();
 
   if (row && !noteUntil) {
@@ -555,7 +747,9 @@ function handle(e) {
       // A build log belongs to one language too, so it goes to that language's row like
       // every other status. Only 'progress' and 'sample' were routed down before; the
       // build phase stayed stranded on the top line.
-      setStat(e.lang, en(raw));
+      // Dòng lệnh build dài hơn bề ngang hàng, nên cắt tại đây — CSS không còn cắt nữa.
+      // Build commands outrun the row, so they are bounded here: CSS no longer clips.
+      setStat(e.lang, clip(en(raw), 26));
       setSub(bad ? en(raw) : 'compiling', '', !bad);
       break;
     }
@@ -568,6 +762,11 @@ function handle(e) {
       doneCount = e.done ?? doneCount;
       totalCount = e.total ?? totalCount;
       setNow((e.benchmark || '').toUpperCase(), true);
+      // Mốc của bài đang chạy: đây chính là thời gian ứng với 1000 điểm. Đứng yên suốt
+      // bài nên đọc được, khác hẳn con số ms nhảy loạn trước đây.
+      // The current benchmark's reference: the time 1000 points is worth. It holds still
+      // for the whole benchmark, unlike the ms figure that used to flicker here.
+      nowMs.textContent = refMs[e.benchmark] ? refMs[e.benchmark].toFixed(1) + ' MS = 1000' : '';
       setStat(e.language, what);
       // Dòng trên đỉnh chỉ còn giữ tiến độ tổng — chi tiết ngôn ngữ đã nằm trong hàng.
       // The top line keeps only overall progress; the per-language detail is in the row.
@@ -581,13 +780,12 @@ function handle(e) {
     // scored at once. 'measurement' then settles it exactly, so the provisional
     // figure never corrupts the result.
     case 'sample': {
-      nowMs.textContent = e.ms.toFixed(1) + ' MS';
       setStat(e.language, e.ms.toFixed(1) + ' <u>ms</u>');
-      if (!LANG_IDS.includes(e.language) || !refMs[e.benchmark]) break;
+      if (!LANG_IDS.includes(e.language) || !refFor(e.benchmark)) break;
       buf[e.language].push(e.ms);
       const q = [...buf[e.language]].sort((a, b) => a - b);
       const m = q.length % 2 ? q[(q.length - 1) / 2] : (q[q.length / 2 - 1] + q[q.length / 2]) / 2;
-      prov[e.language] = Math.round(1000 * refMs[e.benchmark] / m);
+      prov[e.language] = Math.round(1000 * refFor(e.benchmark) / m);
       target[e.language] = settled[e.language] + prov[e.language];
       tweenTo(twScore[e.language], target[e.language], TW_SCORE);
       break;
@@ -607,6 +805,7 @@ function handle(e) {
       break;
     case 'runFinished':
       setStat(null, '');
+      updateClear();
       setRunning(false);
       setNow('DONE', false);
       nowMs.textContent = '';
@@ -622,9 +821,37 @@ function connect() {
   es.onmessage = (m) => { try { handle(JSON.parse(m.data)); } catch {} };
 }
 
+// Xoá đưa màn hình về đúng trạng thái mở lần đầu, rồi tự ẩn đi.
+// Clear returns the screen to exactly how it opens, then hides itself.
+clr.onclick = async () => {
+  armAudio();
+
+  // Đang chạy: dừng thật, giữ nguyên kết quả đã đo trên màn hình. Không xoá — người ta
+  // bấm Stop là để xem cái đang có, chứ không phải để mất nó.
+  // Running: really stop, and leave the measured results on screen. Nothing is cleared —
+  // Stop is pressed to keep what is there, not to lose it.
+  if (running) {
+    const res = await fetch('/api/stop', { method: 'POST' });
+    if (!res.ok) setRunning(false);
+    return;
+  }
+
+  reset();
+  setNow('READY', false);
+  setSub('', '', false);
+  nowMs.textContent = '';
+  updateClear();
+  setGate(true);
+  // Xoá cả nhật ký phát lại trên server, nếu không F5 sẽ dựng lại đúng bảng điểm vừa xoá.
+  // Clear the server's replay log too, or a reload rebuilds the board that was just cleared.
+  fetch('/api/clear', { method: 'POST' }).catch(() => {});
+};
+
 go.onclick = async () => {
   if (running) return;
   armAudio();
+  sfxStart();
+  setGate(false);
   setRunning(true);
   reset();
   setNow('STARTING', true);
@@ -635,6 +862,7 @@ go.onclick = async () => {
   });
   if (!res.ok) {
     setRunning(false);
+    setGate(true);
     setNow('READY', false);
     footEnv.textContent = en((await res.json()).error).slice(0, 60).toUpperCase();
     footEnv.dataset.bad = '1';

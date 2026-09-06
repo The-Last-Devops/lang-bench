@@ -3,7 +3,6 @@
 package main
 
 import (
-	"math"
 	"runtime"
 	"sync"
 
@@ -17,13 +16,13 @@ func main() {
 		threads = runtime.NumCPU()
 	}
 
-	a := make([]float64, n*n)
-	b := make([]float64, n*n)
-	c := make([]float64, n*n)
+	a := make([]int64, n*n)
+	b := make([]int64, n*n)
+	c := make([]int64, n*n)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
-			a[i*n+j] = float64((i*31 + j*17) % 100)
-			b[i*n+j] = float64((i*13 + j*7) % 100)
+			a[i*n+j] = int64((i*31 + j*17) % 100)
+			b[i*n+j] = int64((i*13 + j*7) % 100)
 		}
 	}
 
@@ -46,13 +45,13 @@ func main() {
 		}(lo, hi)
 	}
 	wg.Wait()
-	sum := 0.0
+	var sum uint64
 	for _, v := range c {
-		sum += v
+		sum += uint64(v)
 	}
 	ms := t.Ms()
 
 	ck := common.NewChecksum()
-	ck.Add(uint32(math.Mod(sum, 4294967296.0)))
+	ck.AddU64(sum)
 	common.Report(ms, ck.Hex())
 }

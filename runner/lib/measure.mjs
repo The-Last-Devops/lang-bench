@@ -41,7 +41,21 @@ function parseRssBytes(stderr, mode) {
  * Một lần đo. Trả về { wallMs, internalMs, rssBytes, checksum } hoặc { error }.
  * A single measurement. Returns { wallMs, internalMs, rssBytes, checksum } or { error }.
  */
-export async function measureOnce({ cmd, args, cwd, env, timeoutMs = 300000 }) {
+/**
+ * Thêm `signal` để hủy được lượt chạy đang dở.
+ *
+ * Phải giết đúng tiến trình con: một phép đo có thể mất hàng chục giây, chờ nó xong rồi
+ * mới dừng thì nút Stop coi như không có tác dụng. `signal` đã abort sẵn thì không spawn
+ * gì cả — nếu không, mỗi lần bấm Stop vẫn còn một phép đo lọt qua.
+ *
+ * `signal` makes a run cancellable.
+ *
+ * The child has to be killed outright: a single measurement can take tens of seconds, and
+ * waiting for it to finish would make Stop feel like it does nothing. An already-aborted
+ * signal spawns nothing at all — otherwise one more measurement slips through every press.
+ */
+export async function measureOnce({ cmd, args, cwd, env, timeoutMs = 300000, signal }) {
+  if (signal?.aborted) return { error: 'đã dừng / stopped', aborted: true };
   const mode = await probeTimeMode();
   const useTime = mode !== 'none';
   const spawnCmd = useTime ? '/usr/bin/time' : cmd;
@@ -63,14 +77,24 @@ export async function measureOnce({ cmd, args, cwd, env, timeoutMs = 300000 }) {
       child.kill('SIGKILL');
     }, timeoutMs);
 
+    let aborted = false;
+    const onAbort = () => {
+      aborted = true;
+      child.kill('SIGKILL');
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+
     child.stdout.on('data', (d) => (stdout += d));
     child.stderr.on('data', (d) => (stderr += d));
     child.on('error', (err) => {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
       resolve({ error: `không chạy được: ${err.message}` });
     });
     child.on('close', (code) => {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      if (aborted) return resolve({ error: 'đã dừng / stopped', aborted: true });
       const wallMs = Number(process.hrtime.bigint() - started) / 1e6;
 
       if (timedOut) return resolve({ error: `quá thời gian (${timeoutMs} ms)` });

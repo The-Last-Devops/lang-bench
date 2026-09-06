@@ -42,7 +42,11 @@ let sum = 0;
 for (let i = 0; i < c.length; i++) sum += c[i];
 const ms = t.ms();
 
+// Giống matmul: giá trị nằm gọn trong 2^53 nên Float64Array biểu diễn chính xác tuyệt
+// đối, và checksum khớp đúng với i64 của ba ngôn ngữ kia.
+// As in matmul: every value fits inside 2^53, so Float64Array is exact here and the
+// checksum matches the other three languages' i64.
 const ck = new Checksum();
-ck.add((sum % 4294967296) >>> 0);
+ck.addU64(BigInt(sum));
 report(ms, ck.hex());
 process.exit(0);

@@ -61,3 +61,15 @@ path = "binary-trees/main.rs"
 [[bin]]
 name = "dijkstra"
 path = "dijkstra/main.rs"
+
+[[bin]]
+name = "string-build"
+path = "string-build/main.rs"
+
+[[bin]]
+name = "base64"
+path = "base64/main.rs"
+
+[[bin]]
+name = "sort-objects"
+path = "sort-objects/main.rs"

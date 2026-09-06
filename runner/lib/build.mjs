@@ -25,6 +25,36 @@ async function has(cmd, args = ['--version']) {
 
 /** Cờ tối ưu CPU: -mcpu=native trên ARM, -march=native trên x86. */
 /** CPU tuning flag: -mcpu=native on ARM, -march=native on x86. */
+/**
+ * Binary đã mới hơn mọi file nguồn của nó thì khỏi dịch lại.
+ *
+ * Trước đây C++ dịch lại toàn bộ mọi bài ở MỌI lượt chạy, vô điều kiện — Go và Rust đều
+ * có cache riêng, chỉ C++ là không. Với 20 bài thì đó là hàng chục giây chờ mà không có
+ * gì thay đổi. Mốc so sánh gồm cả thư mục _common, vì sửa một header là mọi bài phải dịch lại.
+ *
+ * Skip the compile when the binary is newer than every source it depends on.
+ *
+ * C++ used to rebuild every benchmark on EVERY run, unconditionally — Go and Rust both
+ * cache, only C++ did not. At twenty benchmarks that is tens of seconds of waiting for
+ * nothing to change. The comparison includes _common, since editing a header invalidates
+ * every benchmark.
+ */
+function isFresh(outPath, srcPaths) {
+  let out;
+  try { out = fs.statSync(outPath).mtimeMs; } catch { return false; }
+  for (const src of srcPaths) {
+    let st;
+    try { st = fs.statSync(src); } catch { return false; }
+    if (st.mtimeMs > out) return false;
+    if (st.isDirectory()) {
+      for (const f of fs.readdirSync(src)) {
+        try { if (fs.statSync(path.join(src, f)).mtimeMs > out) return false; } catch { return false; }
+      }
+    }
+  }
+  return true;
+}
+
 async function nativeFlag(root) {
   const probe = path.join(root, 'build', 'probe.cpp');
   fs.mkdirSync(path.dirname(probe), { recursive: true });
@@ -67,12 +97,16 @@ export async function buildAll({ root, registry, onLog, only }) {
     fs.mkdirSync(path.join(buildDir, 'cpp'), { recursive: true });
     log('cpp', `c++ -O3 ${flag} -std=c++20`);
     const failures = {};
+    let reused = 0;
     for (const id of ids) {
+      const out = path.join(buildDir, 'cpp', id);
+      const src = path.join(bench, id, 'main.cpp');
+      if (isFresh(out, [src, path.join(bench, '_common')])) { reused += 1; continue; }
       const args = ['-std=c++20', '-O3'];
       if (flag) args.push(flag);
       args.push('-I', path.join(bench, '_common'));
-      args.push(path.join(bench, id, 'main.cpp'));
-      args.push('-o', path.join(buildDir, 'cpp', id));
+      args.push(src);
+      args.push('-o', out);
       if (id === 'crypto-hash') args.push('-lcrypto');
       if (id === 'parallel') args.push('-pthread');
       const r = await runCommand('c++', args, { cwd: root });
@@ -81,6 +115,7 @@ export async function buildAll({ root, registry, onLog, only }) {
         log('cpp', `LỖI ${id}: ${failures[id].slice(0, 200)}`);
       }
     }
+    if (reused) log('cpp', `${reused}/${ids.length} đã có sẵn, bỏ qua / cached`);
     result.cpp = {
       available: true,
       failures,

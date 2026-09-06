@@ -27,6 +27,8 @@ const MIME = {
 // for CPU and corrupt both sets of numbers.
 const state = {
   running: false,
+  // Cần giữ để /api/stop hủy được lượt đang chạy. / Kept so /api/stop can cancel a run.
+  ctl: null,
   events: [],
   clients: new Set(),
   startedAt: null,
@@ -123,13 +125,17 @@ async function startRun(options) {
 
   try {
     const { runSuite, parseArgs } = await import('../runner/run.mjs');
-    const opts = { ...parseArgs([]), ...options };
+    state.ctl = new AbortController();
+    const opts = { ...parseArgs([]), ...options, signal: state.ctl.signal };
     const payload = await runSuite(opts, broadcast);
     state.lastRunId = payload.runId;
   } catch (err) {
     broadcast({ type: 'error', message: err.message });
   } finally {
+    const stopped = state.ctl?.signal.aborted ?? false;
+    state.ctl = null;
     state.running = false;
+    if (stopped) broadcast({ type: 'warn', vi: 'đã dừng theo yêu cầu', en: 'stopped on request' });
     broadcast({ type: 'runFinished', runId: state.lastRunId });
   }
 }
@@ -193,6 +199,29 @@ export function startServer({ port = 8080, host = '0.0.0.0' } = {}) {
           state.clients.delete(res);
         });
         return;
+      }
+
+      // Hủy lượt đang chạy. Giết luôn tiến trình con đang đo — một phép đo có thể mất
+      // hàng chục giây, đợi nó xong thì nút Stop coi như vô dụng.
+      // Cancel the current run, killing the measuring child outright: a measurement can
+      // take tens of seconds, and waiting it out would make Stop useless.
+      if (p === '/api/stop' && req.method === 'POST') {
+        if (!state.running || !state.ctl) return sendJson(res, 409, { error: 'không có lượt chạy nào' });
+        state.ctl.abort();
+        return sendJson(res, 202, { stopping: true });
+      }
+
+      // Xoá nhật ký phát lại. Không có đường này thì Clear chỉ dọn được trình duyệt: server
+      // vẫn giữ toàn bộ sự kiện của lượt vừa chạy và phát lại cho mọi trang mới, nên F5 là
+      // bảng điểm hiện lại y nguyên.
+      // Drop the replay log. Without this, Clear only tidies the browser: the server still
+      // holds the finished run's events and replays them to every new page, so a reload
+      // brings the whole board back.
+      if (p === '/api/clear' && req.method === 'POST') {
+        if (state.running) return sendJson(res, 409, { error: 'đang chạy, không xoá được' });
+        state.events = [];
+        state.lastRunId = null;
+        return sendJson(res, 200, { cleared: true });
       }
 
       if (p === '/api/run' && req.method === 'POST') {

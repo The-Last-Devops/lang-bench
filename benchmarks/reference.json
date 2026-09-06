@@ -16,6 +16,9 @@
     "parallel": 2.11,
     "startup": 4.45,
     "binary-trees": 137.58,
-    "dijkstra": 13.8
+    "dijkstra": 13.8,
+    "sort-objects": 8.66,
+    "string-build": 5.81,
+    "base64": 5.02
   }
 }

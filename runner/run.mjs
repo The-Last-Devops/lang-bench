@@ -52,6 +52,51 @@ function paramArgs(params) {
  * Chạy cả bộ. onEvent nhận từng bước để server đẩy ra trình duyệt.
  * Runs the whole suite. onEvent receives each step so the server can stream it.
  */
+/**
+ * Bài nào chưa có mốc trong reference.json thì ghi mốc suy ra từ lượt chạy này.
+ *
+ * Mốc là median nhanh nhất trong các ngôn ngữ — đúng cách những mốc gốc được tạo ra. Nếu
+ * không ghi lại, mỗi lượt chạy sẽ tự suy ra một mốc khác nhau và điểm giữa các lượt không
+ * còn so sánh được. Chỉ ghi bài CHƯA có mốc: mốc đã có là cố định, ghi đè sẽ làm mọi kết
+ * quả cũ mất giá trị so sánh.
+ *
+ * Fill in a reference for any benchmark that reaches the end of a run without one.
+ *
+ * The mark is the fastest median across the languages — how the original marks were made.
+ * Without writing it back, every run would derive its own and scores would stop being
+ * comparable between runs. Only benchmarks that have no mark are written: an existing mark
+ * is fixed, and overwriting it would invalidate every earlier result.
+ */
+function fillMissingReferences(results, benchmarks, onEvent) {
+  const refPath = path.join(ROOT, 'benchmarks', 'reference.json');
+  let doc;
+  try {
+    doc = JSON.parse(fs.readFileSync(refPath, 'utf8'));
+  } catch {
+    return; // không có file thì thôi, đây là việc phụ / no file, this is a side errand
+  }
+  doc.refMs ??= {};
+  const added = [];
+  for (const b of benchmarks) {
+    if (doc.refMs[b.id]) continue;
+    const medians = Object.values(results[b.id] ?? {})
+      .filter((r) => r && r.ok && Number.isFinite(r.median))
+      .map((r) => r.median);
+    if (!medians.length) continue;
+    doc.refMs[b.id] = Number(Math.min(...medians).toFixed(2));
+    added.push(b.id);
+  }
+  if (!added.length) return;
+  try {
+    fs.writeFileSync(refPath, JSON.stringify(doc, null, 2) + '\n');
+    onEvent({
+      type: 'warn',
+      vi: `đã ghi mốc mới cho: ${added.join(', ')}`,
+      en: `wrote new reference marks for: ${added.join(', ')}`,
+    });
+  } catch { /* chỉ đọc thì bỏ qua / read-only mount, skip */ }
+}
+
 export async function runSuite(opts, onEvent = () => {}) {
   const registry = JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'registry.json'), 'utf8'));
 
@@ -100,10 +145,12 @@ export async function runSuite(opts, onEvent = () => {}) {
   const results = {};
 
   for (const [bi, b] of benchmarks.entries()) {
+    if (opts.signal?.aborted) break;
     const reps = runsFor(b);
     results[b.id] = { params: b.params ?? {}, runs: reps, warmup, checksums: {} };
 
     for (const [li, lang] of active.entries()) {
+      if (opts.signal?.aborted) break;
       const tc = toolchains[lang.id];
 
       if (tc.failures[b.id]) {
@@ -126,7 +173,7 @@ export async function runSuite(opts, onEvent = () => {}) {
 
       let failed = null;
       for (let w = 0; w < warmup; w++) {
-        const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs });
+        const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
         if (r.error) { failed = r.error; break; }
       }
 
@@ -144,7 +191,7 @@ export async function runSuite(opts, onEvent = () => {}) {
             language: lang.id, languageIndex: li + 1, languageCount: active.length,
             run: i + 1, runs: reps, phase: 'measure',
           });
-          const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs });
+          const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
           if (r.error) { failed = r.error; break; }
           samples.push(b.metric === 'wall' ? r.wallMs : r.internalMs);
           wall.push(r.wallMs);
@@ -210,6 +257,7 @@ export async function runSuite(opts, onEvent = () => {}) {
   };
   const outPath = path.join(resultsDir, `${runId}.json`);
   fs.writeFileSync(outPath, JSON.stringify(payload, null, 1));
+  if (!opts.signal?.aborted) fillMissingReferences(results, benchmarks, onEvent);
 
   onEvent({ type: 'phase', phase: 'done', runId, path: outPath, scores });
   return payload;

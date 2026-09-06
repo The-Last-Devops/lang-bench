@@ -10,7 +10,7 @@
 <style>
 :root{
   --ground:#0B0E13; --stage:#0E1219; --hair:#222A36; --hair2:#2E3746;
-  --text:#E7ECF3; --faint:#4A5568; --bad:#E0605F;
+  --text:#E7ECF3; --faint:#B4C0D0; --text2:var(--faint); --bad:#E0605F;
   /* Vùng an toàn cho TikTok: đáy rộng nhất vì bị caption + thanh điều hướng che,
      phải rộng nhì vì có cột nút tương tác, trên chừa cho thanh trạng thái.
      Đủ để không mất chữ, không nới quá tay kẻo phí màn hình.
@@ -46,7 +46,10 @@ body{height:100vh;overflow:hidden;}
   display:inline-flex;align-items:baseline;}
 .now b .dots{width:3ch;}
 .now b .dots[data-on="0"]{visibility:hidden;}
-.now s{font-family:var(--mono);font-weight:700;font-size:42px;color:var(--faint);text-decoration:none;
+/* Đứng yên suốt một bài test nên cho sáng — nó là mốc quy đổi điểm, không phải ghi chú.
+   It holds still for a whole benchmark, so it reads bright: this is the scale the points
+   are measured against, not a footnote. */
+.now s{font-family:var(--mono);font-weight:700;font-size:34px;color:var(--text);text-decoration:none;
   font-variant-numeric:tabular-nums;white-space:nowrap;}
 
 .board{flex:1;position:relative;margin-top:52px;}
@@ -66,6 +69,7 @@ body{height:100vh;overflow:hidden;}
 .row[data-out="1"]{opacity:.3;}
 
 .wins{display:grid;gap:8px;flex:none;margin-top:44px;}
+.win{cursor:pointer;}
 .win{height:26px;border-radius:6px;background:var(--hair);transform:scale(.55);opacity:.45;
   transition:transform .3s cubic-bezier(.3,1.6,.5,1), opacity .3s linear;}
 
@@ -83,6 +87,21 @@ body{height:100vh;overflow:hidden;}
 #go:hover:not(:disabled){background:#fff;}
 #go:focus-visible{outline:3px solid #4C8DFF;outline-offset:4px;}
 #go:disabled{background:transparent;color:var(--faint);box-shadow:inset 0 0 0 3px var(--hair2);cursor:default;}
+
+/* Xoá kết quả: chỉ hiện khi trên màn hình đang CÓ gì để xoá, nên lúc bắt đầu và ngay sau
+   khi xoá thì nó biến mất — không có nút chết nằm trong khung quay.
+   Clear results: shown only while there is something on screen to clear, so it is absent
+   at the start and right after a clear — no dead control sitting in the recording frame. */
+#clr{font-family:var(--sans);font-weight:700;font-size:34px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);background:transparent;border:0;border-radius:14px;padding:18px 32px;cursor:pointer;
+  line-height:1;white-space:nowrap;flex:none;box-shadow:inset 0 0 0 3px var(--hair2);}
+#clr:hover{color:var(--text);box-shadow:inset 0 0 0 3px var(--faint);}
+/* Ở chế độ Stop thì nhấn mạnh hơn: nó là hành động can thiệp, không phải dọn dẹp.
+   In Stop mode it reads stronger: this interrupts work rather than tidying up. */
+#clr[data-stop="1"]{color:var(--bad);box-shadow:inset 0 0 0 3px var(--bad);}
+#clr[data-stop="1"]:hover{color:var(--text);background:var(--bad);box-shadow:none;}
+#clr:focus-visible{outline:3px solid #4C8DFF;outline-offset:4px;}
+#clr[hidden]{display:none;}
 
 
 /* Dòng trạng thái phụ: cho biết hệ thống đang làm gì trong lúc chưa có điểm.
@@ -117,15 +136,14 @@ body{height:100vh;overflow:hidden;}
    number and no longer has to travel to the top of the screen to learn what is happening. */
 .stat{font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);margin-left:20px;
   opacity:0;transition:opacity .2s linear;white-space:nowrap;
-  /* Dòng lệnh build dài hơn hàng — cắt bằng ellipsis chứ đừng đẩy tên và điểm ra khỏi khung.
-     A build command outruns the row: clip it with an ellipsis rather than shoving the
-     name and the score out of the frame. */
-  flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;}
-/* Đang bật thì giành phần chỗ trống trước khi margin-left:auto của .delta nuốt mất,
-   nếu không dòng "run 1/5" bị bóp thành "r…". Tắt thì không chiếm gì, nhường chỗ cho .note.
-   While on it claims the free space before .delta's auto margin swallows it — otherwise
-   "run 1/5" is squeezed down to "r…". While off it takes no space, leaving room for .note. */
-.stat[data-on="1"]{flex:1 1 0;}
+  /* KHÔNG co, KHÔNG cắt ở tầng CSS. Hai lần trước tôi để CSS cắt bằng ellipsis và ô này
+     bị bóp còn "r…" rồi "r" — trong một hàng flex có cả margin-left:auto thì việc chia
+     chỗ quá khó đoán. Độ dài giờ do JS quyết, nên bề rộng luôn vừa đúng nội dung.
+     No shrinking and no clipping in CSS. Two earlier attempts let CSS clip with an
+     ellipsis and this box collapsed to "r…" and then "r": space distribution in a flex
+     row that also carries an auto margin is too hard to predict. JS bounds the text
+     instead, so the width is always exactly the content. */
+  flex:none;}
 .stat[data-on="1"]{opacity:1;}
 .stat u{text-decoration:none;color:var(--faint);}
 
@@ -157,6 +175,61 @@ body{height:100vh;overflow:hidden;}
 @keyframes beat{0%,100%{transform:scale(1)}45%{transform:scale(1.42)}}
 .row[data-win="1"] .score{text-shadow:0 0 44px currentColor;}
 .row .score,.row .glow{color:inherit;}
+
+/* Popup mở đầu: nói rõ giới hạn của phép đo TRƯỚC khi ai đó bấm Run, rồi đóng lại và
+   không bao giờ nằm trong khung quay lúc đang chạy.
+   Nằm trong stage nên nó thu phóng cùng khung 9:16 — đặt ngoài thì cỡ chữ sẽ không khớp
+   với phần còn lại của màn hình.
+   The opening panel: it states the limits of the measurement BEFORE anyone presses Run,
+   then closes and is never in frame during a run.
+   It lives inside the stage so it scales with the 9:16 frame — placed outside, its type
+   would not match the rest of the screen. */
+.gate{position:absolute;inset:0;z-index:30;display:grid;place-items:center;
+  background:rgba(11,14,19,.82);padding:0 64px;}
+.gate[hidden]{display:none;}
+.gate .card{width:100%;background:var(--stage);border-radius:24px;padding:56px 44px 48px;
+  box-shadow:0 0 0 2px var(--hair2), 0 30px 90px rgba(0,0,0,.7);
+  display:flex;flex-direction:column;align-items:flex-start;gap:48px;}
+.gate p{margin:0;font-family:var(--sans);font-weight:500;font-size:42px;line-height:1.34;
+  color:var(--text2);}
+/* Câu đầu nói ĐÂY LÀ CÁI GÌ, phần sau là điều cần dè chừng. Tách bằng độ đậm và độ sáng
+   để đọc lướt vẫn nắm được vế thứ nhất.
+   The first sentence says WHAT THIS IS; the rest is the caveat. Weight and brightness
+   separate them so a glance still lands on the first half. */
+.gate p b{display:block;margin-bottom:14px;color:var(--text);font-weight:700;}
+.gate #go{align-self:center;}
+
+/* Bảng màu ngôn ngữ. Đây là chỗ duy nhất nói màu nào là ngôn ngữ nào — trong cuộc đua thì
+   chỉ có màu, không có chú giải, nên người xem phải học nó ở đây trước khi bắt đầu.
+   The language legend. This is the only place that says which colour is which language: the
+   race itself carries colour and no key, so a viewer has to learn it here before the start. */
+.gate .langs{align-self:stretch;display:grid;grid-template-columns:repeat(2,1fr);
+  gap:20px 40px;padding:8px 0 4px;border-top:2px solid var(--hair);padding-top:36px;}
+.gate .langs div{display:flex;align-items:center;gap:18px;
+  font-family:var(--mono);font-weight:700;font-size:36px;color:var(--text);white-space:nowrap;}
+.gate .langs i{display:block;width:26px;height:26px;border-radius:7px;flex:none;}
+.gate .langs b{color:var(--text2);font-weight:700;font-size:30px;}
+
+/* Bảng chi tiết khi rê chuột lên một ô thắng. Chỉ hiện khi rê nên không bao giờ lọt vào
+   clip; nó dành cho lúc soi kết quả, không phải cho người xem.
+   The detail panel on hovering a win square. It only exists while the pointer is on the
+   square, so it can never reach the clip: it is for inspecting results, not for viewers. */
+.tip{position:absolute;z-index:10;pointer-events:none;
+  background:var(--stage);box-shadow:0 0 0 2px var(--hair2), 0 18px 50px rgba(0,0,0,.65);
+  border-radius:14px;padding:20px 24px;min-width:420px;}
+.tip[hidden]{display:none;}
+.tip h4{margin:0 0 14px;font-family:var(--mono);font-weight:800;font-size:30px;letter-spacing:.02em;
+  text-transform:uppercase;color:var(--text);}
+.tip h4 em{font-style:normal;color:var(--faint);font-weight:700;}
+.tip table{border-collapse:collapse;width:100%;}
+.tip td{font-family:var(--mono);font-weight:700;font-size:26px;color:var(--text);padding:5px 0;
+  font-variant-numeric:tabular-nums;white-space:nowrap;}
+.tip td.c{width:22px;}
+.tip td.c i{display:block;width:18px;height:18px;border-radius:5px;}
+.tip td.p,.tip td.m{text-align:right;padding-left:26px;}
+.tip td.m{color:var(--faint);}
+.tip tr[data-win="1"] td{color:var(--text);}
+.tip tr[data-win="1"] td.n::after{content:' ◄';color:var(--faint);}
 
 /* Ô thắng dưới đáy nảy lên một nhịp khi vừa được chấm.
    The win square at the foot kicks once as it is awarded. */
@@ -239,8 +312,20 @@ body{height:100vh;overflow:hidden;}
   <div class="sub"><span class="dot" id="subDot"></span><span class="txt"><span id="subTxt"></span><span class="dots" id="subDots">...</span></span><span class="cnt" id="subCnt"></span></div>
   <div class="board" id="board"></div>
   <div class="wins" id="wins"></div>
+  <div class="tip" id="tip" hidden></div>
+
+  <div class="gate" id="gate">
+    <div class="card">
+      <p lang="vi"><b id="gateLead">Bài kiểm tra hiệu năng của các ngôn ngữ lập trình.</b>
+      Kết quả chỉ để tham khảo. Ngôn ngữ thắng ở đây không có nghĩa là nó sẽ nhanh hơn
+      trong dự án của bạn — điều đó còn tuỳ vào công việc cụ thể, cách bạn viết code,
+      thư viện bạn dùng và môi trường thực thi.</p>
+      <div class="langs" id="gateLangs"></div>
+      <button id="go">Run</button>
+    </div>
+  </div>
   <div class="foot">
-    <div class="left"><button id="go">Run</button><b id="clock">0.0s</b></div>
+    <div class="left"><button id="clr">Clear</button><b id="clock">0.0s</b></div>
     <span id="footEnv"></span>
   </div>
 </div></div>
