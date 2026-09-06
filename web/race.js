@@ -90,11 +90,10 @@ const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage'), wins = $('wins'), board = $('board');
-const nowName = $('nowName'), nowMs = $('nowMs'), footEnv = $('footEnv'), go = $('go'), clock = $('clock');
+const nowName = $('nowName'), footEnv = $('footEnv'), go = $('go'), clock = $('clock');
 const clr = $('clr'), tip = $('tip'), gate = $('gate'), gateLangs = $('gateLangs');
-const gateLead = $('gateLead');
-const subDot = $('subDot'), subTxt = $('subTxt'), subCnt = $('subCnt');
-const nowDots = $('nowDots'), subDots = $('subDots');
+const gateLead = $('gateLead'), gateCaveat = $('gateCaveat');
+const nowDots = $('nowDots');
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fmt = (n) => Math.round(n).toLocaleString('en-US');
@@ -271,6 +270,7 @@ const twScore = {}, twGain = {}, twMs = {};
 let noteUntil = 0;                // kết quả vòng hiện tới lúc nào
 let winEls = [], rows = [];
 let running = false, dead = new Set();
+let envLine = '';
 let startedAt = 0, elapsedMs = 0;   // đồng hồ giây cạnh nút Run / the seconds clock beside Run
 
 for (const l of LANGS) {
@@ -460,15 +460,16 @@ async function boot() {
   benches = registry.benchmarks.map((b) => b.id);
   // Số bài lấy từ registry chứ không viết cứng: thêm bài là câu này tự đúng theo.
   // The count comes from the registry, never hard-coded: add a benchmark and it follows.
-  gateLead.textContent =
-    `Bài kiểm tra hiệu năng của ${LANGS.length} ngôn ngữ lập trình, qua ${benches.length} bài test.`;
+  gateLead.textContent = leadLine(benches.length);
+  gateCaveat.textContent = caveatLine();
   refMs = reference.refMs;
   build();
 
   fillGateLangs();
   fetch('/api/host').then((r) => r.json()).then(({ host }) => {
     const cores = langs?.languages?.[0]?.cores ?? host.usableCores;
-    footEnv.textContent = [host.env, cores + ' cores', host.arch].join(' · ').toUpperCase();
+    envLine = [host.env, cores + ' cores', host.arch].join(' · ').toUpperCase();
+    footEnv.textContent = envLine;
   }).catch(() => {});
 
   updateClear();
@@ -508,8 +509,69 @@ function updateClear() {
 // lại. Vòng lặp là popup → chạy → kết quả → Clear → popup.
 // The panel is the only way in: open while the screen is idle, closed for the whole run,
 // reopened by Clear. The loop is panel → run → results → Clear → panel.
+/**
+ * Câu mở đầu phải nói đúng thứ đang được đo.
+ *
+ * Bốn phiên bản Node là MỘT ngôn ngữ, không phải bốn — gọi là "4 ngôn ngữ lập trình" thì sai
+ * hẳn, và người xem biết chút ít sẽ nhận ra ngay. Đếm theo ngôn ngữ GỐC (bỏ số phiên bản ở
+ * cuối id), rồi chọn câu theo đúng tình huống.
+ *
+ * The opening line has to name what is actually being measured.
+ *
+ * Four Node versions are ONE language, not four; calling that "4 programming languages" is
+ * simply wrong, and any viewer who knows a little will catch it. Count by BASE language —
+ * the id with its version digits removed — and pick the wording that fits.
+ */
+// Đang chạy nhiều phiên bản của MỘT ngôn ngữ hay nhiều ngôn ngữ khác nhau.
+// Whether this is several versions of ONE language, or several different languages.
+const baseIds = () => [...new Set(LANGS.map((l) => l.id.replace(/\d+$/, '')))];
+
+/**
+ * Câu cảnh báo phải gọi đúng tên thứ đang so.
+ *
+ * Ghép cứng "ngôn ngữ / phiên bản" thì đọc lủng củng, mà để nguyên "ngôn ngữ" thì sai khi
+ * đang chạy bốn bản Node. Đổi đúng một từ theo tình huống là gọn nhất, và câu vẫn trôi.
+ *
+ * The caveat has to name what is actually being compared.
+ *
+ * Writing "language / version" everywhere reads badly, and leaving it as "language" is wrong
+ * while four Node versions are running. Swapping the single word to fit is the tidiest fix,
+ * and the sentence still reads.
+ */
+function caveatLine() {
+  const word = baseIds().length === 1 && LANGS.length > 1 ? 'Phiên bản' : 'Ngôn ngữ';
+  return `Kết quả chỉ để tham khảo. ${word} thắng ở đây không có nghĩa là nó sẽ nhanh hơn `
+    + 'trong dự án của bạn — điều đó còn tuỳ vào công việc cụ thể, cách bạn viết code, '
+    + 'thư viện bạn dùng và môi trường thực thi.';
+}
+
+function leadLine(benchCount) {
+  const bases = baseIds();
+  const tail = `, qua ${benchCount} bài test.`;
+  if (bases.length === 1 && LANGS.length > 1) {
+    const name = BASE_NAME[bases[0]] ?? cap(bases[0]);
+    return `Bài kiểm tra hiệu năng của ${LANGS.length} phiên bản ${name}${tail}`;
+  }
+  if (bases.length === LANGS.length) {
+    return `Bài kiểm tra hiệu năng của ${LANGS.length} ngôn ngữ lập trình${tail}`;
+  }
+  // Vừa nhiều ngôn ngữ vừa nhiều phiên bản: phải nói cả hai con số.
+  // Several languages and several versions at once: both numbers have to be said.
+  return `Bài kiểm tra hiệu năng của ${bases.length} ngôn ngữ lập trình, ${LANGS.length} phiên bản${tail}`;
+}
+
+const BASE_NAME = { cpp: 'C++', rust: 'Rust', go: 'Go', node: 'Node.js', java: 'Java', php: 'PHP', python: 'Python', ruby: 'Ruby' };
+
 function setGate(on) {
   gate.hidden = !on;
+}
+
+// Trả dòng chân về thông tin máy. Lỗi ghi đè lên đúng chỗ đó, nên xoá lỗi là khôi phục nó.
+// Put the footer back to the machine line: an error overwrites that very spot, so clearing
+// the error means restoring it.
+function clearError() {
+  delete footEnv.dataset.bad;
+  footEnv.textContent = envLine;
 }
 
 // Dựng bảng màu từ chính LANGS, không viết cứng trong HTML: thêm hay bỏ một ngôn ngữ thì
@@ -565,12 +627,10 @@ function reset() {
     r.ghost.style.width = '0%';
     clearTimeout(r.rankTimer); r.rank.dataset.on = '0'; r.ring.dataset.on = '0';
   });
-  setSub('', '', false);
   setNow(null, running);
   winEls.forEach((el) => { el.style.background = ''; el.style.transform = ''; el.style.opacity = ''; delete el.dataset.new; });
   hideTip();
   rows.forEach((r) => { r.delta.style.opacity = 0; r.delta.textContent = ''; });
-  nowMs.textContent = '';
   draw(); layout();
   updateClear();
 }
@@ -624,13 +684,6 @@ function setStat(langId, html) {
   }
 }
 
-function setSub(text, count, live) {
-  subTxt.textContent = text || '';
-  subCnt.textContent = count || '';
-  subDot.dataset.live = live ? '1' : '0';
-  subDots.dataset.on = live && text ? '1' : '0';
-  subDot.parentElement.dataset.done = '0';
-}
 
 // Ba chấm là lời hứa: còn chạy thì còn nhấp. Đứng yên ở READY / DONE / lỗi.
 // The ellipsis is a promise: it blinks only while something is running.
@@ -842,18 +895,16 @@ function onMeasurement(e) {
     }
   }
   setNow(benchmark.toUpperCase(), true);
-  nowMs.textContent = stats.median.toFixed(1) + ' MS';
 }
 
 function handle(e) {
   switch (e.type) {
     case 'runStarted': reset(); setRunning(true); setNow('STARTING', true); break;
     case 'phase':
-      if (e.phase === 'build') { setNow('BUILDING', true); setSub('preparing toolchains', '', true); }
+      if (e.phase === 'build') { setNow('BUILDING', true); }
       if (e.phase === 'run') {
         setNow('RUNNING', true);
         totalCount = e.total ?? 0;
-        setSub('starting measurements', '0/' + totalCount, true);
       }
       break;
 
@@ -876,7 +927,6 @@ function handle(e) {
       // Dòng lệnh build dài hơn bề ngang hàng, nên cắt tại đây — CSS không còn cắt nữa.
       // Build commands outrun the row, so they are bounded here: CSS no longer clips.
       setStat(e.lang, clip(en(raw), 26));
-      setSub(bad ? en(raw) : 'compiling', '', !bad);
       break;
     }
 
@@ -892,11 +942,9 @@ function handle(e) {
       // bài nên đọc được, khác hẳn con số ms nhảy loạn trước đây.
       // The current benchmark's reference: the time 1000 points is worth. It holds still
       // for the whole benchmark, unlike the ms figure that used to flicker here.
-      nowMs.textContent = refMs[e.benchmark] ? refMs[e.benchmark].toFixed(1) + ' MS = 1000' : '';
       setStat(e.language, what);
       // Dòng trên đỉnh chỉ còn giữ tiến độ tổng — chi tiết ngôn ngữ đã nằm trong hàng.
       // The top line keeps only overall progress; the per-language detail is in the row.
-      setSub('measuring', doneCount + '/' + totalCount, true);
       break;
     }
 
@@ -921,7 +969,6 @@ function handle(e) {
       break;
     case 'measurement':
       doneCount = e.done ?? doneCount; totalCount = e.total ?? totalCount;
-      subCnt.textContent = doneCount + '/' + totalCount;
       onMeasurement(e);
       break;
     case 'error':
@@ -934,10 +981,7 @@ function handle(e) {
       updateClear();
       setRunning(false);
       setNow('DONE', false);
-      nowMs.textContent = '';
       sfxDone();
-      setSub(benches.length + ' benchmarks complete', doneCount + '/' + totalCount, false);
-      subDot.parentElement.dataset.done = '1';
       break;
   }
 }
@@ -964,8 +1008,7 @@ clr.onclick = async () => {
 
   reset();
   setNow('READY', false);
-  setSub('', '', false);
-  nowMs.textContent = '';
+  clearError();
   updateClear();
   setGate(true);
   // Xoá cả nhật ký phát lại trên server, nếu không F5 sẽ dựng lại đúng bảng điểm vừa xoá.
@@ -978,6 +1021,7 @@ go.onclick = async () => {
   armAudio();
   sfxStart();
   setGate(false);
+  clearError();
   setRunning(true);
   reset();
   setNow('STARTING', true);

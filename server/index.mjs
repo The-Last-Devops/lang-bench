@@ -130,7 +130,11 @@ async function startRun(options) {
     const payload = await runSuite(opts, broadcast);
     state.lastRunId = payload.runId;
   } catch (err) {
-    broadcast({ type: 'error', message: err.message });
+    // Bấm Stop thì fetch trong runner ném AbortError — đó là kết quả ĐÚNG của việc dừng,
+    // không phải hỏng hóc. Báo nó thành lỗi đỏ khiến người dùng tưởng mình vừa làm hỏng gì.
+    // Pressing Stop makes the runner's fetch throw AbortError: that is the correct outcome
+    // of stopping, not a failure. Reporting it in red reads as though something broke.
+    if (!state.ctl?.signal.aborted) broadcast({ type: 'error', message: err.message });
   } finally {
     const stopped = state.ctl?.signal.aborted ?? false;
     state.ctl = null;

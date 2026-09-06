@@ -44,11 +44,6 @@ body{height:100vh;overflow:hidden;}
   display:inline-flex;align-items:baseline;}
 .now b .dots{width:3ch;}
 .now b .dots[data-on="0"]{visibility:hidden;}
-/* Đứng yên suốt một bài test nên cho sáng — nó là mốc quy đổi điểm, không phải ghi chú.
-   It holds still for a whole benchmark, so it reads bright: this is the scale the points
-   are measured against, not a footnote. */
-.now s{font-family:var(--mono);font-weight:700;font-size:34px;color:var(--text);text-decoration:none;
-  font-variant-numeric:tabular-nums;white-space:nowrap;}
 
 .board{flex:1;position:relative;margin-top:52px;}
 /* Thứ tự trong hàng: SỐ trước, rồi TÊN nằm ngay trên vạch của chính nó.
@@ -104,25 +99,16 @@ body{height:100vh;overflow:hidden;}
 
 /* Dòng trạng thái phụ: cho biết hệ thống đang làm gì trong lúc chưa có điểm.
    The sub-status line: says what the system is doing while no points are landing. */
-.sub{flex:none;display:flex;align-items:center;gap:18px;margin-top:18px;min-height:34px;}
-.sub .dot{width:14px;height:14px;border-radius:50%;background:var(--faint);flex:none;}
-.sub .dot[data-live="1"]{background:var(--text);animation:pulse 1s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 /* Luôn sáng. Phần lớn thời gian của lượt chạy, dòng này là thứ duy nhất chuyển động
    trên màn hình — nó là nội dung chính, không phải ghi chú phụ.
    Always at full brightness. For most of a run this line is the only thing moving on
    screen: it is the content, not a footnote. */
-.sub .txt{font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);letter-spacing:.02em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Xong lượt chạy thì dòng này là kết luận, không còn là ghi chú phụ — cho nó sáng
    bằng chữ chính và đậm lên, cả phần đếm 48/48.
    Once the run ends this line is the verdict, not a footnote — bring it up to full
    text brightness and weight, the 48/48 count with it. */
-.sub[data-done="1"] .txt,.sub[data-done="1"] .cnt{font-weight:800;}
 
-.sub[data-done="1"] .dot{background:var(--text);opacity:1;}
-.sub .cnt{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);
-  font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .4s linear;}
 
 
 
@@ -305,8 +291,7 @@ body{height:100vh;overflow:hidden;}
 <body>
 <div id="hint" data-on="0">click anywhere for sound</div>
 <div id="fit"><div id="stage">
-  <div class="now"><b><span id="nowName">READY</span><span class="dots" id="nowDots">...</span></b><s id="nowMs"></s></div>
-  <div class="sub"><span class="dot" id="subDot"></span><span class="txt"><span id="subTxt"></span><span class="dots" id="subDots">...</span></span><span class="cnt" id="subCnt"></span></div>
+  <div class="now"><b><span id="nowName">READY</span><span class="dots" id="nowDots">...</span></b></div>
   <div class="board" id="board"></div>
   <div class="wins" id="wins"></div>
   <div class="tip" id="tip" hidden></div>
@@ -314,9 +299,7 @@ body{height:100vh;overflow:hidden;}
   <div class="gate" id="gate">
     <div class="card">
       <p lang="vi"><b id="gateLead">Bài kiểm tra hiệu năng của các ngôn ngữ lập trình.</b>
-      Kết quả chỉ để tham khảo. Ngôn ngữ thắng ở đây không có nghĩa là nó sẽ nhanh hơn
-      trong dự án của bạn — điều đó còn tuỳ vào công việc cụ thể, cách bạn viết code,
-      thư viện bạn dùng và môi trường thực thi.</p>
+      <span id="gateCaveat"></span></p>
       <div class="langs" id="gateLangs"></div>
       <button id="go">Run</button>
     </div>

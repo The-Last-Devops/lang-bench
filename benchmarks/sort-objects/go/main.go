@@ -1,34 +1,72 @@
-// sort-objects — sắp xếp mảng bản ghi bằng hàm so sánh. Xem main.cpp để biết vì sao.
-// sort-objects — sorting records through a comparator. See main.cpp for why.
+// sort-objects — merge sort đáy-lên TỰ VIẾT trên mảng bản ghi. Xem main.cpp để biết vì sao.
+// sort-objects — a hand-written bottom-up merge sort over records. See main.cpp for why.
 package main
 
-import (
-	"sort"
-
-	"langbench/gocommon"
-)
+import "langbench/gocommon"
 
 type rec struct {
 	key uint32
 	id  uint32
 }
 
+func before(a, b rec) bool {
+	if a.key != b.key {
+		return a.key < b.key
+	}
+	return a.id < b.id
+}
+
 func main() {
-	n := int(common.Param("n", 1000000))
+	n := int(common.Param("n", 400000))
 
 	rng := common.NewLcg(99)
 	v := make([]rec, n)
+	buf := make([]rec, n)
 	for i := range v {
 		v[i] = rec{key: rng.Next(), id: uint32(i)}
 	}
 
 	t := common.NewTimer()
-	sort.Slice(v, func(a, b int) bool {
-		if v[a].key != v[b].key {
-			return v[a].key < v[b].key
+
+	a, b := v, buf
+	for width := 1; width < n; width *= 2 {
+		for lo := 0; lo < n; lo += width * 2 {
+			mid := lo + width
+			if mid > n {
+				mid = n
+			}
+			hi := lo + width*2
+			if hi > n {
+				hi = n
+			}
+			i, j, k := lo, mid, lo
+			for i < mid && j < hi {
+				if before(a[j], a[i]) {
+					b[k] = a[j]
+					j++
+				} else {
+					b[k] = a[i]
+					i++
+				}
+				k++
+			}
+			for i < mid {
+				b[k] = a[i]
+				i++
+				k++
+			}
+			for j < hi {
+				b[k] = a[j]
+				j++
+				k++
+			}
 		}
-		return v[a].id < v[b].id
-	})
+		a, b = b, a
+	}
+	if &a[0] != &v[0] {
+		copy(v, a)
+	}
+
 	var sum uint32
 	for i, r := range v {
 		sum += uint32(i+1) * (r.key ^ r.id)
