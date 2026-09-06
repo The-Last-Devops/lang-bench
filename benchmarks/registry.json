@@ -164,6 +164,25 @@
       ]
     },
     {
+      "id": "dijkstra",
+      "group": "A",
+      "runs": 5,
+      "params": {
+        "n": 200000,
+        "deg": 8
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "dijkstra 200k đỉnh",
+        "desc": "Đường đi ngắn nhất trên đồ thị thưa, heap nhị phân tự viết — truy cập bộ nhớ rải rác."
+      },
+      "en": {
+        "title": "dijkstra, 200k nodes",
+        "desc": "Shortest paths over a sparse graph with a hand-written binary heap — scattered memory access."
+      },
+      "notes": []
+    },
+    {
       "id": "hashmap",
       "group": "B",
       "runs": 5,
@@ -277,6 +296,24 @@
           "en": "Uses __slots__ because that is how a Python developer writes a linked-list node; without it every object carries an extra dict."
         }
       ]
+    },
+    {
+      "id": "binary-trees",
+      "group": "B",
+      "runs": 5,
+      "params": {
+        "depth": 16
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "cây nhị phân depth 16",
+        "desc": "Dựng rồi huỷ hàng loạt cây nhỏ, ngắn hạn — đo bộ cấp phát và GC."
+      },
+      "en": {
+        "title": "binary trees, depth 16",
+        "desc": "Building and discarding many small, short-lived trees — allocator and GC pressure."
+      },
+      "notes": []
     },
     {
       "id": "string-regex",

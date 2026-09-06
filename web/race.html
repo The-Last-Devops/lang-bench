@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lang-bench Race</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='20'>🏁</text></svg>">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@700;800&display=swap">
+<style>
+:root{
+  --ground:#0B0E13; --stage:#0E1219; --hair:#222A36; --hair2:#2E3746;
+  --text:#E7ECF3; --faint:#4A5568; --bad:#E0605F;
+  /* Vùng an toàn cho TikTok: đáy rộng nhất vì bị caption + thanh điều hướng che,
+     phải rộng nhì vì có cột nút tương tác, trên chừa cho thanh trạng thái.
+     Đủ để không mất chữ, không nới quá tay kẻo phí màn hình.
+     TikTok safe area: the bottom needs the most room (caption plus nav bar), the right
+     next (the action button column), the top clears the status bar. Enough that nothing
+     is covered, not so much that the screen is wasted. */
+  --safe-t:120px; --safe-r:120px; --safe-b:200px; --safe-l:80px;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --sans:'Barlow Semi Condensed','Barlow',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+body{height:100vh;overflow:hidden;}
+
+/* Khung 9:16 đúng bằng khung quay, nằm ngoài luồng layout để không tự nong
+   vùng đo rồi làm sai phép thu phóng.
+   A true 9:16 recording frame, taken out of flow so it cannot inflate the box
+   it is measured against. */
+#fit{position:fixed;inset:0;overflow:hidden;}
+#stage{width:1080px;height:1920px;position:absolute;left:50%;top:50%;transform-origin:center center;
+  background:var(--stage);overflow:hidden;
+  display:flex;flex-direction:column;
+  padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+  box-shadow:0 0 0 1px var(--hair), 0 40px 120px rgba(0,0,0,.6);}
+
+.rail{display:grid;gap:8px;flex:none;}
+.seg{height:10px;background:var(--hair);border-radius:2px;position:relative;overflow:hidden;}
+.seg i{position:absolute;inset:0;transform:scaleX(0);transform-origin:left;background:var(--text);border-radius:2px;
+  transition:transform .3s linear;}
+
+.now{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-top:30px;}
+.now b{font-family:var(--mono);font-weight:800;font-size:56px;letter-spacing:-.02em;line-height:1;
+  display:inline-flex;align-items:baseline;}
+.now b .dots{width:3ch;}
+.now b .dots[data-on="0"]{visibility:hidden;}
+.now s{font-family:var(--mono);font-weight:700;font-size:42px;color:var(--faint);text-decoration:none;
+  font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+.board{flex:1;position:relative;margin-top:52px;}
+/* Thứ tự trong hàng: SỐ trước, rồi TÊN nằm ngay trên vạch của chính nó.
+   Score first, then the name sitting directly on its own bar. */
+.row{position:absolute;left:0;right:0;display:flex;flex-direction:column;justify-content:center;will-change:transform;}
+.score{font-family:var(--mono);font-weight:800;font-size:128px;line-height:.9;letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums;text-align:right;}
+.head{display:flex;align-items:center;gap:14px;margin-top:10px;}
+.head .chip{margin-left:2px;}
+.chip{width:22px;height:22px;border-radius:6px;flex:none;}
+.name{font-weight:700;font-size:46px;letter-spacing:.07em;text-transform:uppercase;line-height:1;flex:none;}
+.delta{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:38px;opacity:0;line-height:1;
+  transition:opacity .25s linear;flex:none;}
+.track{height:20px;background:var(--hair);border-radius:10px;overflow:hidden;margin-top:14px;}
+.track i{display:block;height:100%;width:0;border-radius:10px;transition:width .3s linear;}
+.row[data-out="1"]{opacity:.3;}
+
+.wins{display:grid;gap:8px;flex:none;margin-top:44px;}
+.win{height:26px;border-radius:6px;background:var(--hair);transform:scale(.55);opacity:.45;
+  transition:transform .3s cubic-bezier(.3,1.6,.5,1), opacity .3s linear;}
+
+.foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:40px;}
+.foot span{font-family:var(--mono);font-weight:700;font-size:23px;color:var(--faint);letter-spacing:.02em;
+  text-align:right;white-space:nowrap;flex:none;}
+.foot .left{display:flex;align-items:center;gap:24px;flex:none;}
+#clock{font-family:var(--mono);font-weight:800;font-size:40px;color:var(--text);
+  font-variant-numeric:tabular-nums;line-height:1;flex:none;}
+.foot span[data-bad="1"]{color:var(--bad);}
+
+#go{font-family:var(--sans);font-weight:700;font-size:34px;letter-spacing:.08em;text-transform:uppercase;
+  color:#0B0E13;background:var(--text);border:0;border-radius:14px;padding:18px 40px;cursor:pointer;line-height:1;
+  white-space:nowrap;flex:none;}
+#go:hover:not(:disabled){background:#fff;}
+#go:focus-visible{outline:3px solid #4C8DFF;outline-offset:4px;}
+#go:disabled{background:transparent;color:var(--faint);box-shadow:inset 0 0 0 3px var(--hair2);cursor:default;}
+
+
+/* Dòng trạng thái phụ: cho biết hệ thống đang làm gì trong lúc chưa có điểm.
+   The sub-status line: says what the system is doing while no points are landing. */
+.sub{flex:none;display:flex;align-items:center;gap:18px;margin-top:18px;min-height:34px;}
+.sub .dot{width:14px;height:14px;border-radius:50%;background:var(--faint);flex:none;}
+.sub .dot[data-live="1"]{background:var(--text);animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+/* Luôn sáng. Phần lớn thời gian của lượt chạy, dòng này là thứ duy nhất chuyển động
+   trên màn hình — nó là nội dung chính, không phải ghi chú phụ.
+   Always at full brightness. For most of a run this line is the only thing moving on
+   screen: it is the content, not a footnote. */
+.sub .txt{font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);letter-spacing:.02em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* Xong lượt chạy thì dòng này là kết luận, không còn là ghi chú phụ — cho nó sáng
+   bằng chữ chính và đậm lên, cả phần đếm 48/48.
+   Once the run ends this line is the verdict, not a footnote — bring it up to full
+   text brightness and weight, the 48/48 count with it. */
+.sub[data-done="1"] .txt,.sub[data-done="1"] .cnt{font-weight:800;}
+
+.sub[data-done="1"] .dot{background:var(--text);opacity:1;}
+.sub .cnt{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);
+  font-variant-numeric:tabular-nums;white-space:nowrap;transition:color .4s linear;}
+
+
+
+/* Kết quả mỗi vòng hiện ngay trong hàng — không có gì che màn hình.
+   Each round's result lands inside the row itself — nothing covers the screen. */
+/* Ngôn ngữ nào đang được đo thì trạng thái hiện ngay trong hàng của nó — mắt đang
+   nhìn con số ở đó, không phải liếc lên đầu màn hình mới biết chuyện gì đang xảy ra.
+   The language being measured reports inside its own row: the eye is already on that
+   number and no longer has to travel to the top of the screen to learn what is happening. */
+.stat{font-family:var(--mono);font-weight:700;font-size:30px;color:var(--text);margin-left:20px;
+  opacity:0;transition:opacity .2s linear;white-space:nowrap;
+  /* Dòng lệnh build dài hơn hàng — cắt bằng ellipsis chứ đừng đẩy tên và điểm ra khỏi khung.
+     A build command outruns the row: clip it with an ellipsis rather than shoving the
+     name and the score out of the frame. */
+  flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+/* Đang bật thì giành phần chỗ trống trước khi margin-left:auto của .delta nuốt mất,
+   nếu không dòng "run 1/5" bị bóp thành "r…". Tắt thì không chiếm gì, nhường chỗ cho .note.
+   While on it claims the free space before .delta's auto margin swallows it — otherwise
+   "run 1/5" is squeezed down to "r…". While off it takes no space, leaving room for .note. */
+.stat[data-on="1"]{flex:1 1 0;}
+.stat[data-on="1"]{opacity:1;}
+.stat u{text-decoration:none;color:var(--faint);}
+
+.note{font-family:var(--mono);font-weight:700;font-size:34px;color:var(--faint);margin-left:20px;
+  font-variant-numeric:tabular-nums;opacity:0;transition:opacity .3s linear;white-space:nowrap;}
+.note[data-on="1"]{opacity:1;}
+.note b{color:var(--text);font-weight:800;}
+
+/* Vạch mờ phía sau = tốc độ của riêng vòng này, để so sánh thấy ngay bằng mắt.
+   The ghost bar behind = this round's own speed, so the gap reads at a glance. */
+.track u{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:10px;opacity:.28;
+  transition:width .55s cubic-bezier(.3,1,.4,1), opacity .3s linear;}
+.track{position:relative;}
+
+/* Người thắng vòng: quầng sáng + một vệt sáng quét ngang một lần.
+   The round winner: a halo plus a single band of light sweeping across. */
+.row .glow{position:absolute;inset:-18px -28px;border-radius:22px;pointer-events:none;
+  opacity:0;transition:opacity .35s linear;}
+.row[data-win="1"] .glow{opacity:1;}
+.row .glow::before{content:'';position:absolute;inset:0;border-radius:22px;
+  background:radial-gradient(120% 140% at 50% 50%, currentColor 0%, transparent 62%);opacity:.16;}
+.row .glow::after{content:'';position:absolute;top:0;bottom:0;width:34%;border-radius:22px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
+  transform:translateX(-140%);}
+.row[data-win="1"] .glow::after{animation:sweep 1.1s cubic-bezier(.4,0,.2,1) .12s 1;}
+@keyframes sweep{to{transform:translateX(420%);}}
+
+.row[data-win="1"] .chip{animation:beat .5s ease-out 2;}
+@keyframes beat{0%,100%{transform:scale(1)}45%{transform:scale(1.42)}}
+.row[data-win="1"] .score{text-shadow:0 0 44px currentColor;}
+.row .score,.row .glow{color:inherit;}
+
+/* Ô thắng dưới đáy nảy lên một nhịp khi vừa được chấm.
+   The win square at the foot kicks once as it is awarded. */
+.win[data-new="1"]{animation:pop .5s cubic-bezier(.3,1.7,.5,1) 1;}
+@keyframes pop{0%{transform:scale(.55)}55%{transform:scale(1.32)}100%{transform:scale(1)}}
+
+
+/* Ba chấm chạy: bằng chứng sống là hệ thống vẫn đang làm việc, kể cả khi
+   chưa có số nào về. Cắt bề rộng theo bậc nên luôn đúng 1→2→3 chấm, không
+   nhòe giữa chừng như khi đổi content.
+   The running ellipsis: live proof work is happening even when no figure has
+   landed yet. Stepping the width keeps it exactly 1→2→3 dots, never a blur
+   mid-frame the way animating content does. */
+/* letter-spacing về 0 để 1ch đúng bằng bề rộng một dấu chấm — phép tính dưới
+   dựa hẳn vào đó. jump-none mới cho đủ 4 mốc 0·1·2·3; steps(4,end) lấy đầu mỗi
+   khoảng nên dừng ở 2¼ chấm, không bao giờ đủ ba.
+   letter-spacing is zeroed so 1ch is exactly one dot wide — the maths below leans
+   on that. jump-none is what lands all four stops 0·1·2·3; steps(4,end) samples
+   the start of each interval and so stalls at 2¼ dots, never reaching three. */
+.dots{display:inline-block;overflow:hidden;vertical-align:bottom;white-space:nowrap;
+  letter-spacing:0;width:0;opacity:0;transition:opacity .2s linear;}
+.dots[data-on="1"]{opacity:1;animation:dots 1.2s steps(4,jump-none) infinite;}
+@keyframes dots{from{width:0}to{width:3ch}}
+@media (prefers-reduced-motion:reduce){ .dots[data-on="1"]{animation:none;width:3ch;} }
+
+
+/* Thứ hạng của vòng vừa xong: con số to, đứng ngay đầu hàng, không lẫn vào đâu.
+   Hạng 1 tô đặc màu ngôn ngữ; các hạng sau chỉ viền.
+   Kiểu STAMP: hiện bé xíu rồi đóng dấu bật vọt lên 1.45× trước khi về đúng cỡ,
+   kèm một vòng sóng lan ra ngoài — số bật hẳn khỏi nền chứ không chỉ mờ dần vào.
+   The finishing position for the round just ended: a big numeral at the head of the
+   row, impossible to miss. First place is filled with the language colour, the rest
+   outlined. STAMP: it enters tiny, punches out to 1.45x, then settles — with a ring
+   spreading past it, so the number lands on the screen instead of fading onto it. */
+.rankwrap{position:relative;width:58px;height:58px;flex:none;display:grid;place-items:center;}
+.rank{width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:800;font-size:34px;line-height:1;
+  color:var(--c);box-shadow:inset 0 0 0 3px var(--hair2);background:transparent;
+  opacity:0;transform:scale(.25);}
+.rank[data-on="1"]{animation:stampIn .52s cubic-bezier(.2,1.8,.35,1) forwards;}
+@keyframes stampIn{
+  0%{opacity:0;transform:scale(.25);}
+  60%{opacity:1;transform:scale(1.45);}
+  100%{opacity:1;transform:scale(1);}}
+.rank[data-p="2"]{color:var(--text);}
+/* Màu ngôn ngữ chỉ đi qua biến --c đặt inline, còn `color` thì hoàn toàn do CSS
+   quyết định. Đặt `color` inline sẽ đè mọi rule dưới đây — inline luôn thắng rule
+   class — nên hạng 1 giữ nguyên màu ngôn ngữ, thành chữ cam trên nền cam và biến
+   mất; các hạng khác cũng không nhận được màu trắng.
+   Only --c is set inline; `color` is left entirely to CSS. Setting `color` inline
+   overrides every rule below — inline always beats a class rule — so first place kept
+   the language colour and became an orange digit on an orange fill, invisible, while
+   the other places never picked up their white. */
+.rank[data-p="1"]{color:#0B0E13;background:var(--c);box-shadow:none;}
+.rank[data-p="x"]{color:var(--bad);box-shadow:inset 0 0 0 3px var(--bad);opacity:.55;}
+
+/* Vòng sóng: chỉ là viền, phóng to rồi tan — không chiếm chỗ, không đẩy layout. */
+/* The ring is border-only: it scales out and dissolves, taking no space and pushing nothing. */
+.ring{position:absolute;inset:0;border-radius:18px;box-shadow:0 0 0 3px currentColor;
+  opacity:0;pointer-events:none;}
+.ring[data-on="1"]{animation:ringOut .62s ease-out forwards;}
+@keyframes ringOut{0%{opacity:.85;transform:scale(1);}100%{opacity:0;transform:scale(2.3);}}
+
+/* Nằm ở góc màn hình, ngoài khung 9:16 — không bao giờ lọt vào khung quay. */
+/* Parked in the viewport corner, outside the 9:16 frame — it can never enter the shot. */
+#hint{position:fixed;left:16px;bottom:14px;z-index:5;opacity:0;pointer-events:none;
+  font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);transition:opacity .3s linear;}
+#hint[data-on="1"]{opacity:1;animation:pulse 1.4s ease-in-out infinite;}
+
+@media (prefers-reduced-motion:reduce){ .row,.track i,.track u,.win,.delta,.note,.glow,.rank,.ring,.seg i{transition:none!important;animation:none!important;}
+  .rank[data-on="1"]{opacity:1;transform:scale(1);} }
+</style>
+</head>
+<body>
+<div id="hint" data-on="0">click anywhere for sound</div>
+<div id="fit"><div id="stage">
+  <div class="rail" id="rail"></div>
+  <div class="now"><b><span id="nowName">READY</span><span class="dots" id="nowDots">...</span></b><s id="nowMs"></s></div>
+  <div class="sub"><span class="dot" id="subDot"></span><span class="txt"><span id="subTxt"></span><span class="dots" id="subDots">...</span></span><span class="cnt" id="subCnt"></span></div>
+  <div class="board" id="board"></div>
+  <div class="wins" id="wins"></div>
+  <div class="foot">
+    <div class="left"><button id="go">Run</button><b id="clock">0.0s</b></div>
+    <span id="footEnv"></span>
+  </div>
+</div></div>
+<script src="./race.js"></script>
+</body>
+</html>

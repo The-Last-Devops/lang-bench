@@ -43,16 +43,26 @@ async function nativeFlag(root) {
  * Trả về map langId -> { available, run(benchId, params) -> {cmd,args}, buildLog }
  * Returns a map langId -> { available, run(benchId, params) -> {cmd,args}, buildLog }
  */
-export async function buildAll({ root, registry, onLog }) {
+export async function buildAll({ root, registry, onLog, only }) {
   const bench = path.join(root, 'benchmarks');
   const buildDir = path.join(root, 'build');
   const log = (lang, msg) => onLog?.({ lang, message: msg });
   const result = {};
 
+  // Chỉ build đúng những ngôn ngữ được yêu cầu. Trước đây hàm này build sạch mọi
+  // toolchain tìm thấy trên máy, kể cả khi --langs chỉ xin bốn cái — nên javac,
+  // php, ruby vẫn chạy và kéo dài giai đoạn build vô ích.
+  // Build only the languages that were actually asked for. This used to build every
+  // toolchain present on the machine even when --langs asked for four, so javac, php
+  // and ruby still ran and padded out the build phase for nothing.
+  const want = (id) => !only || only.has(id);
+  const skip = (id) => { result[id] = { available: false, reason: 'không được yêu cầu', failures: {} }; };
+
   const ids = registry.benchmarks.map((b) => b.id);
 
   // ---- C++ ----
-  if (await has('c++')) {
+  if (!want('cpp')) skip('cpp');
+  else if (await has('c++')) {
     const flag = await nativeFlag(root);
     fs.mkdirSync(path.join(buildDir, 'cpp'), { recursive: true });
     log('cpp', `c++ -O3 ${flag} -std=c++20`);
@@ -82,7 +92,8 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Rust ----
-  if (await has('cargo')) {
+  if (!want('rust')) skip('rust');
+  else if (await has('cargo')) {
     log('rust', 'cargo build --release (lto=fat, codegen-units=1)');
     const r = await runCommand('cargo', ['build', '--release', '--manifest-path', path.join(bench, 'Cargo.toml')], { cwd: bench });
     const targetDir = process.env.CARGO_TARGET_DIR || path.join(bench, 'target');
@@ -102,7 +113,8 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Go ----
-  if (await has('go', ['version'])) {
+  if (!want('go')) skip('go');
+  else if (await has('go', ['version'])) {
     fs.mkdirSync(path.join(buildDir, 'go'), { recursive: true });
     log('go', 'go build -ldflags="-s -w"');
     const failures = {};
@@ -126,15 +138,19 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Node.js ----
-  result.node = {
-    available: true,
-    failures: {},
-    run: (id, params) => ({ cmd: process.execPath, args: [path.join(bench, id, 'main.js'), ...params] }),
-  };
-  log('node', 'không cần build');
+  if (!want('node')) skip('node');
+  else {
+    result.node = {
+      available: true,
+      failures: {},
+      run: (id, params) => ({ cmd: process.execPath, args: [path.join(bench, id, 'main.js'), ...params] }),
+    };
+    log('node', 'không cần build');
+  }
 
   // ---- PHP ----
-  if (await has('php', ['--version'])) {
+  if (!want('php')) skip('php');
+  else if (await has('php', ['--version'])) {
     result.php = {
       available: true,
       failures: {},
@@ -161,7 +177,8 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Java ----
-  if (await has('javac', ['-version'])) {
+  if (!want('java')) skip('java');
+  else if (await has('javac', ['-version'])) {
     fs.mkdirSync(path.join(buildDir, 'java'), { recursive: true });
     log('java', 'javac (mỗi bài compile vào thư mục riêng)');
     const failures = {};
@@ -186,8 +203,11 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Python ----
-  const python = (await has('python3', ['--version'])) ? 'python3' : (await has('python', ['--version'])) ? 'python' : null;
-  if (python) {
+  const python = !want('python') ? null
+    : (await has('python3', ['--version'])) ? 'python3'
+    : (await has('python', ['--version'])) ? 'python' : null;
+  if (!want('python')) skip('python');
+  else if (python) {
     result.python = {
       available: true,
       failures: {},
@@ -200,7 +220,8 @@ export async function buildAll({ root, registry, onLog }) {
   }
 
   // ---- Ruby ----
-  if (await has('ruby', ['--version'])) {
+  if (!want('ruby')) skip('ruby');
+  else if (await has('ruby', ['--version'])) {
     // YJIT chỉ có ở bản Ruby được build kèm nó. Phải dò, vì truyền --yjit cho bản
     // không hỗ trợ sẽ làm chương trình chết ngay.
     // YJIT only exists in Ruby builds that shipped it. Probe for it: passing --yjit to a

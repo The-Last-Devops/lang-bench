@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "note": "Fixed reference time per benchmark, in milliseconds. Score = 1000 * ref / median, summed over benchmarks — unbounded, higher is better. Provisional: the original twelve come from run-0005 (warmup 0, runs 1); binary-trees and dijkstra were measured directly in the Docker image. Re-measure the whole set before publishing.",
+  "source": "run-0005",
+  "refMs": {
+    "fib": 3.22,
+    "matmul": 3.48,
+    "primes": 14.05,
+    "hashmap": 423.07,
+    "json": 84.03,
+    "sort": 41.48,
+    "alloc-gc": 27.85,
+    "string-regex": 57.05,
+    "crypto-hash": 87.81,
+    "file-io": 474.27,
+    "parallel": 2.11,
+    "startup": 4.45,
+    "binary-trees": 137.58,
+    "dijkstra": 13.8
+  }
+}

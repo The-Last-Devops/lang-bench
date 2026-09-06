@@ -144,6 +144,10 @@ export function startServer({ port = 8080, host = '0.0.0.0' } = {}) {
         return sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'registry.json'), 'utf8')));
       }
 
+      if (p === '/api/reference') {
+        return sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'reference.json'), 'utf8')));
+      }
+
       if (p === '/api/host') {
         const info = await collectHostInfo();
         return sendJson(res, 200, { host: info, envKey: envKey(info) });

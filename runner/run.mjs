@@ -82,6 +82,7 @@ export async function runSuite(opts, onEvent = () => {}) {
     root: ROOT,
     registry: { ...registry, benchmarks },
     onLog: (e) => onEvent({ type: 'log', ...e }),
+    only: new Set(languages.map((l) => l.id)),
   });
 
   const active = languages.filter((l) => toolchains[l.id]?.available);

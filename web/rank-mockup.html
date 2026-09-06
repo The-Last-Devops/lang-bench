@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rank reveal — mockup</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@700;800&display=swap">
+<style>
+:root{--ground:#0B0E13;--stage:#0E1219;--hair:#222A36;--hair2:#2E3746;--text:#E7ECF3;--faint:#4A5568;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;--sans:'Barlow Semi Condensed',system-ui,sans-serif;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);padding:28px 32px 60px;}
+h1{font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 6px}
+.hint{color:var(--faint);font-family:var(--mono);font-size:13px;margin:0 0 22px}
+.bar{display:flex;gap:12px;align-items:center;margin-bottom:26px;flex-wrap:wrap}
+button{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.09em;text-transform:uppercase;
+  color:#0B0E13;background:var(--text);border:0;border-radius:9px;padding:12px 24px;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--hair2)}
+button.ghost[data-on="1"]{background:var(--text);color:#0B0E13;box-shadow:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:22px}
+.card{background:var(--stage);border:1px solid var(--hair);border-radius:16px;padding:26px 26px 30px}
+.card h2{font-family:var(--mono);font-size:15px;letter-spacing:.1em;margin:0;color:var(--text)}
+.card p{font-size:14px;color:var(--faint);margin:6px 0 20px;line-height:1.45;font-family:var(--mono)}
+
+/* Tỉ lệ thu nhỏ ~0.42 so với sân khấu 1080px thật, giữ nguyên tương quan.
+   Scaled to ~0.42 of the real 1080px stage, proportions intact. */
+.row{display:flex;align-items:center;gap:10px;height:62px;position:relative}
+.chip{width:12px;height:12px;border-radius:3px;flex:none}
+.name{font-weight:700;font-size:20px;letter-spacing:.07em;text-transform:uppercase;width:74px}
+.note{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--faint);font-variant-numeric:tabular-nums}
+.note b{color:var(--text);font-weight:800}
+.sc{font-family:var(--mono);font-weight:800;font-size:26px;margin-left:auto;font-variant-numeric:tabular-nums}
+
+.rank{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;
+  font-family:var(--mono);font-weight:800;font-size:24px;line-height:1;
+  color:var(--faint);box-shadow:inset 0 0 0 2px var(--hair2);opacity:0;position:relative;overflow:hidden}
+.rank.p1{color:#0B0E13;box-shadow:none}
+.rank.px{color:#E0605F;box-shadow:inset 0 0 0 2px #E0605F}
+
+/* ── A · STAMP: bé xíu rồi đóng dấu bật lên to, kèm vòng sóng lan ra ── */
+.a .rank[data-go="1"]{animation:stampIn .52s cubic-bezier(.2,1.8,.35,1) forwards}
+@keyframes stampIn{0%{opacity:0;transform:scale(.25)}60%{opacity:1;transform:scale(1.45)}100%{opacity:1;transform:scale(1)}}
+.a .ring{position:absolute;left:0;top:0;width:44px;height:44px;border-radius:12px;
+  box-shadow:0 0 0 2px currentColor;opacity:0;pointer-events:none}
+.a .rank[data-go="1"] ~ .ring{animation:ringOut .62s ease-out forwards}
+@keyframes ringOut{0%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(2.3)}}
+
+/* ── B · SLAM: rơi từ trên xuống, to rồi ép nhỏ lại, có bóng đổ ── */
+.b .rank[data-go="1"]{animation:slamIn .46s cubic-bezier(.3,1.5,.4,1) forwards}
+@keyframes slamIn{0%{opacity:0;transform:translateY(-26px) scale(2.1)}
+  55%{opacity:1;transform:translateY(0) scale(.82)}100%{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── C · ROLL: quay số 4→3→2→1 rồi dừng đúng hạng, kiểu bảng lật ── */
+.c .rank{overflow:hidden}
+.c .reel{display:flex;flex-direction:column;transition:transform .6s cubic-bezier(.25,1,.3,1)}
+.c .reel span{height:44px;display:grid;place-items:center}
+.c .rank[data-go="1"]{animation:fadeIn .18s linear forwards}
+@keyframes fadeIn{to{opacity:1}}
+
+.win{animation:pulse .5s ease-out 2}
+@keyframes pulse{0%,100%{filter:none}50%{filter:brightness(1.5)}}
+</style>
+</head>
+<body>
+<h1>Rank reveal — 3 phương án</h1>
+<p class="hint">Bấm REPLAY để xem lại. Bật SOUND để nghe. Số hiện lần lượt 1 → 2 → 3 → 4.</p>
+<div class="bar">
+  <button id="replay">Replay</button>
+  <button class="ghost" id="snd" data-on="0">Sound: off</button>
+</div>
+<div class="grid" id="grid"></div>
+
+<script>
+const LANGS=[{id:'cpp',label:'C++',color:'#4C8DFF',ms:3.3,pt:1000},
+             {id:'rust',label:'Rust',color:'#F2703C',ms:7.3,pt:449},
+             {id:'go',label:'Go',color:'#2FCBDE',ms:8.3,pt:398},
+             {id:'node',label:'Node',color:'#8FD14F',ms:22.1,pt:149}];
+
+/* ── âm thanh tổng hợp bằng WebAudio: không cần file, không cần mạng ──
+   Synthesised with WebAudio: no asset files, no network. */
+let ac=null, sound=false;
+const snd=document.getElementById('snd');
+snd.onclick=()=>{sound=!sound;snd.dataset.on=sound?'1':'0';snd.textContent='Sound: '+(sound?'on':'off');
+  if(sound&&!ac)ac=new (window.AudioContext||window.webkitAudioContext)();};
+
+function beep({freq=440,dur=.12,type='triangle',gain=.16,slide=0,delay=0}={}){
+  if(!sound||!ac)return;
+  const t=ac.currentTime+delay, o=ac.createOscillator(), g=ac.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,freq+slide),t+dur);
+  // Bao biên độ có tấn công nhanh và tắt mượt — không bị "cụp" ở cuối.
+  // A fast attack and a smooth tail: no click when the note ends.
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t+dur+.02);
+}
+// Hạng 1 nghe cao và sáng nhất, càng xuống càng trầm.
+// First place rings highest and brightest; each step down sits lower.
+const RANK_HZ=[0,1046.5,784,659.3,523.3];
+function rankSfx(p){ beep({freq:RANK_HZ[p],dur:.2,type:'triangle',gain:.17}); if(p===1)
+  [0,.09,.18].forEach((d,i)=>beep({freq:[784,1046.5,1568][i],dur:.3,type:'sine',gain:.12,delay:d})); }
+function tickSfx(){ beep({freq:180+Math.random()*40,dur:.03,type:'square',gain:.03}); }
+
+const VARIANTS=[
+ {k:'a',title:'A · STAMP',desc:'Bé xíu → đóng dấu bật lên 1.45× → về 1. Có vòng sóng lan ra ngoài.'},
+ {k:'b',title:'B · SLAM',desc:'Rơi từ trên xuống, to 2.1× rồi ép nhỏ 0.82× rồi bật về 1.'},
+ {k:'c',title:'C · ROLL',desc:'Bảng lật quay 4→3→2→1, dừng đúng hạng. Đọc ra "đang chốt kết quả".'},
+];
+
+const grid=document.getElementById('grid');
+grid.innerHTML=VARIANTS.map(v=>`<div class="card ${v.k}"><h2>${v.title}</h2><p>${v.desc}</p>`+
+ LANGS.map((l,i)=>`<div class="row" data-i="${i}">
+   <div class="rank ${i===0?'p1':''}" style="${i===0?'background:'+l.color+';color:#0B0E13':'color:'+l.color}">`+
+   (v.k==='c'?`<div class="reel"><span>4</span><span>3</span><span>2</span><span>1</span></div>`:`${i+1}`)+
+   `</div>${v.k==='a'?'<i class="ring" style="color:'+l.color+'"></i>':''}
+   <div class="chip" style="background:${l.color}"></div>
+   <div class="name">${l.label}</div>
+   <div class="note"><b>${l.ms.toFixed(1)} ms</b> · ${(l.ms/LANGS[0].ms).toFixed(2)}× · <b>+${l.pt}</b></div>
+   <div class="sc" style="color:${l.color}">0</div></div>`).join('')+`</div>`).join('');
+
+function play(){
+  document.querySelectorAll('.card').forEach(card=>{
+    const k=card.classList[1];
+    card.querySelectorAll('.row').forEach((row,i)=>{
+      const r=row.querySelector('.rank'), reel=row.querySelector('.reel'), sc=row.querySelector('.sc');
+      r.removeAttribute('data-go'); r.style.opacity=0; row.classList.remove('win');
+      if(reel){reel.style.transition='none';reel.style.transform='translateY(0)';}
+      sc.textContent='0';
+      void r.offsetWidth;
+      setTimeout(()=>{
+        r.dataset.go='1';
+        if(k==='c'){ r.style.opacity=1;
+          requestAnimationFrame(()=>{reel.style.transition='transform .6s cubic-bezier(.25,1,.3,1)';
+            reel.style.transform='translateY(-'+(3-i)*44+'px)';}); }
+        rankSfx(i+1);
+        if(i===0)row.classList.add('win');
+        // Số điểm bò lên bằng tween thời gian, kèm tiếng tích tắc thưa.
+        // The score climbs on a timed tween with a sparse tick underneath.
+        const to=LANGS[i].pt, t0=performance.now(), D=900; let last=0;
+        (function step(now){const p=Math.min(1,(now-t0)/D), e=1-Math.pow(1-p,3);
+          const v=Math.round(to*e); sc.textContent=v.toLocaleString('en-US');
+          if(v-last>to/9){last=v;tickSfx();}
+          if(p<1)requestAnimationFrame(step);})(performance.now());
+      }, i*260);
+    });
+  });
+}
+document.getElementById('replay').onclick=play;
+play();
+</script>
+</body>
+</html>

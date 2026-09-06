@@ -21,7 +21,17 @@ services:
       - "${LB_PORT:-8090}:8080"
     # Số liệu chỉ so sánh được khi mọi lần chạy dùng đúng cùng hạn mức này.
     # Numbers are only comparable when every run gets exactly these limits.
-    cpus: 4.0
+    #
+    # 3 chứ không phải 4: VM của Docker có 6 CPU, chừa lại phần dư cho daemon và cho
+    # chính tiến trình web đang phục vụ dashboard. Lưu ý hạn mức này tính cho CẢ
+    # container — nó không "để dành" riêng một nhân cho server; server vẫn ăn chung
+    # 3 nhân này với runner. Muốn tách hẳn thì phải cho server một container riêng.
+    #
+    # 3 rather than 4: the Docker VM has 6 CPUs, so this leaves headroom for the daemon
+    # and for the web process serving the dashboard. Note the limit covers the WHOLE
+    # container — it does not reserve a core for the server, which still shares these
+    # three with the runner. Truly isolating it means giving the server its own container.
+    cpus: 3.0
     mem_limit: 5g
     # Không cho container bị swap ra ngoài — swap làm sai số liệu bộ nhớ.
     # No swapping — swap would corrupt the memory numbers.

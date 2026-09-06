@@ -53,3 +53,11 @@ path = "parallel/main.rs"
 [[bin]]
 name = "startup"
 path = "startup/main.rs"
+
+[[bin]]
+name = "binary-trees"
+path = "binary-trees/main.rs"
+
+[[bin]]
+name = "dijkstra"
+path = "dijkstra/main.rs"
