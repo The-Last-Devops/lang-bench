@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lang-bench — cover</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=JetBrains+Mono:wght@700;800&display=swap">
+<style>
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;background:#0B0E13;color:#E7ECF3;
+  font-family:'Barlow Semi Condensed',system-ui,sans-serif;}
+#wrap{position:fixed;inset:0;display:grid;place-items:center;padding:20px 20px 76px;}
+canvas{width:auto;height:auto;max-width:calc(100vw - 40px);max-height:calc(100vh - 96px);
+  border-radius:10px;box-shadow:0 20px 70px rgba(0,0,0,.6);}
+.bar{position:fixed;left:0;right:0;bottom:0;height:60px;display:flex;gap:8px;align-items:center;
+  justify-content:center;background:#0B0E13;border-top:1px solid #1b2028;}
+.bar button{font:600 14px 'Barlow Semi Condensed',sans-serif;letter-spacing:.05em;
+  text-transform:uppercase;color:#E7ECF3;background:#141922;border:1px solid #2E3746;
+  border-radius:8px;padding:9px 18px;cursor:pointer;}
+.bar button[data-on="1"]{background:#E7ECF3;color:#0B0E13;border-color:#E7ECF3;}
+.bar #dl{background:#4C8DFF;border-color:#4C8DFF;color:#06101f;font-weight:700;}
+.bar span{font:12px 'JetBrains Mono',monospace;color:#6b7688;margin-left:8px;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv" width="1080" height="1920"></canvas></div>
+<div class="bar">
+  <button data-v="0">1 · Lanes</button>
+  <button data-v="1">2 · Columns</button>
+  <button data-v="2">3 · Texture</button>
+  <button data-v="3">4 · Type</button>
+  <button id="dl">Tải PNG</button>
+  <span>1080 &times; 1920</span>
+</div>
+
+<script>
+const W = 1080, H = 1920;
+const BG = '#0B0E13', INK = '#E7ECF3', DIM = '#B4C0D0', HAIR = '#222A36';
+const LANGS = [
+  { id:'cpp',  label:'C++',  color:'#4C8DFF', v:'14.2.0'  },
+  { id:'rust', label:'Rust', color:'#F2703C', v:'1.96.0'  },
+  { id:'go',   label:'Go',   color:'#2FCBDE', v:'1.27.0'  },
+  { id:'node', label:'Node', color:'#8FD14F', v:'22.16.0' },
+];
+const BENCHES = ['fib','matmul','primes','dijkstra','hashmap','json','sort','sort-objects',
+  'alloc-gc','binary-trees','string-regex','base64','string-build','crypto-hash','file-io',
+  'parallel','startup'];
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let variant = 0;
+
+const sans = (w, px) => `${w} ${px}px 'Barlow Semi Condensed', sans-serif`;
+const mono = (w, px) => `${w} ${px}px 'JetBrains Mono', monospace`;
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
+const bg = () => { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); };
+const title = (lines, x, y, px, color) => {
+  ctx.font = sans(700, px); ctx.fillStyle = color || INK;
+  for (const l of lines) { ctx.fillText(l, x, y); y += px * 0.97; }
+  return y;
+};
+
+/* 1 — LANES. Bốn làn màu tràn hết bề ngang, dài ngắn khác nhau: ở cỡ thumbnail thì hình
+   khối và màu đọc được, còn chữ thì không. Đây là thứ quyết định một cover TikTok.
+   Four full-bleed lanes of different lengths: at thumbnail size the shapes and colours read
+   and the words do not, which is what actually decides a TikTok cover. */
+function lanes() {
+  bg();
+  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 380, 158);
+  const widths = [1.0, 0.86, 0.68, 0.46];
+  let y = 900;
+  LANGS.forEach((l, i) => {
+    ctx.fillStyle = l.color;
+    rr(0, y, (W - 120) * widths[i] + 120, 190, 0);
+    ctx.font = sans(700, 92);
+    ctx.fillStyle = '#0B0E13';
+    ctx.letterSpacing = '3px';
+    ctx.fillText(l.label, 80, y + 128);
+    ctx.letterSpacing = '0px';
+    y += 218;
+  });
+  ctx.font = mono(700, 34);
+  ctx.fillStyle = DIM;
+  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+}
+
+/* 2 — COLUMNS. Bốn cột dựng đứng cao thấp khác nhau, như biểu đồ đứng dậy. Khoảng trống
+   trên đầu để chừa chỗ cho avatar và nút của TikTok.
+   Four standing columns of unlike heights, a bar chart on its feet. The space up top is
+   left clear for TikTok's own avatar and buttons. */
+function columns() {
+  bg();
+  const heights = [1080, 980, 760, 560];
+  const cw = 200, gap = 32;
+  const x0 = (W - (cw * 4 + gap * 3)) / 2;
+  const base = 1700;
+  LANGS.forEach((l, i) => {
+    const x = x0 + i * (cw + gap);
+    ctx.fillStyle = l.color;
+    rr(x, base - heights[i], cw, heights[i], 18);
+    ctx.save();
+    ctx.translate(x + cw / 2, base - 40);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = sans(700, 74);
+    ctx.fillStyle = '#0B0E13';
+    ctx.letterSpacing = '4px';
+    ctx.textAlign = 'left';
+    ctx.fillText(l.label, 0, 26);
+    ctx.restore();
+    ctx.textAlign = 'left';
+    ctx.letterSpacing = '0px';
+  });
+  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 340, 132);
+  ctx.font = mono(700, 34);
+  ctx.fillStyle = DIM;
+  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+}
+
+/* 3 — TEXTURE. Tên 17 bài test rải thành nền mờ, tiêu đề đè lên. Nhìn ra ngay là "có dữ
+   liệu thật ở đây", hợp với người xem kỹ thuật.
+   The seventeen benchmark names laid down as a dim field with the title punched over it.
+   It reads as "there is real data here", which is what a technical viewer responds to. */
+function texture() {
+  bg();
+  ctx.font = mono(700, 40);
+  ctx.fillStyle = '#182030';
+  let ty = 120;
+  for (let r = 0; r < 22; r++) {
+    let tx = 40 - (r % 3) * 90;
+    while (tx < W) {
+      const b = BENCHES[(r * 5 + Math.floor(tx / 100)) % BENCHES.length];
+      ctx.fillText(b, tx, ty);
+      tx += ctx.measureText(b).width + 46;
+    }
+    ty += 84;
+  }
+  ctx.fillStyle = 'rgba(11,14,19,.72)';
+  ctx.fillRect(0, 520, W, 900);
+  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 700, 150);
+  let x = 80;
+  LANGS.forEach((l) => {
+    ctx.fillStyle = l.color;
+    rr(x, 1230, 34, 34, 9);
+    ctx.font = sans(700, 60);
+    ctx.fillStyle = INK;
+    ctx.fillText(l.label, x + 50, 1262);
+    x += 50 + ctx.measureText(l.label).width + 56;
+  });
+}
+
+/* 4 — TYPE. Chữ chiếm gần hết khung, ngôn ngữ gói trong một dòng mono. Đọc được ở cỡ nhỏ
+   nhất trong bốn mẫu, nhưng cũng ít thông tin nhất.
+   Type fills the frame, the languages collapse into one mono line. The most legible of the
+   four when small, and the one that says the least. */
+function typeOnly() {
+  bg();
+  const y = title(['Bài', 'test', 'hiệu', 'năng'], 80, 460, 260);
+  ctx.fillStyle = HAIR;
+  ctx.fillRect(80, y - 100, W - 160, 4);
+  let x = 80;
+  LANGS.forEach((l) => {
+    ctx.fillStyle = l.color;
+    rr(x, y - 44, 30, 30, 8);
+    ctx.font = mono(800, 52);
+    ctx.fillStyle = INK;
+    ctx.fillText(l.label, x + 44, y - 16);
+    x += 44 + ctx.measureText(l.label).width + 48;
+  });
+  ctx.font = mono(700, 34);
+  ctx.fillStyle = DIM;
+  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+}
+
+const DRAW = [lanes, columns, texture, typeOnly];
+function draw() { ctx.clearRect(0, 0, W, H); ctx.textAlign = 'left'; DRAW[variant](); }
+
+document.querySelectorAll('[data-v]').forEach((b) => {
+  b.onclick = () => {
+    variant = Number(b.dataset.v);
+    document.querySelectorAll('[data-v]').forEach((x) => (x.dataset.on = x === b ? '1' : '0'));
+    draw();
+  };
+});
+document.getElementById('dl').onclick = () => {
+  cv.toBlob((b) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = `cover-${variant + 1}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, 'image/png');
+};
+
+document.querySelector('[data-v="0"]').dataset.on = '1';
+draw();
+if (document.fonts?.ready) document.fonts.ready.then(draw);
+fetch('/api/host').then((r) => r.json()).then(({ host }) => {
+  for (const l of LANGS) {
+    const m = /(\d+\.\d+(?:\.\d+)?)/.exec(host.toolchains?.[l.id] || '');
+    if (m) l.v = m[1];
+  }
+  draw();
+}).catch(() => {});
+</script>
+</body>
+</html>

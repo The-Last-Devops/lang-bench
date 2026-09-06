@@ -149,82 +149,101 @@ export async function runSuite(opts, onEvent = () => {}) {
     const reps = runsFor(b);
     results[b.id] = { params: b.params ?? {}, runs: reps, warmup, checksums: {} };
 
-    for (const [li, lang] of active.entries()) {
-      if (opts.signal?.aborted) break;
+    const env = { LB_TMPDIR: process.env.LB_TMPDIR || (host.env === 'docker' ? '/tmp' : path.join(ROOT, 'build')) };
+
+    // Một chỗ giữ trạng thái cho mỗi ngôn ngữ, vì các lần đo của nó không còn liền nhau.
+    // One slot of state per language, since its repetitions are no longer contiguous.
+    const slots = active.map((lang, li) => {
       const tc = toolchains[lang.id];
-
       if (tc.failures[b.id]) {
-        results[b.id][lang.id] = { ok: false, error: `build thất bại: ${tc.failures[b.id]}` };
-        done += 1;
-        onEvent({ type: 'measurement', benchmark: b.id, language: lang.id, stats: results[b.id][lang.id], done, total });
-        continue;
+        return { lang, li, failed: `build thất bại: ${tc.failures[b.id]}`, samples: [], wall: [], rssMax: null, checksum: null };
       }
-
-      onEvent({
-        type: 'progress',
-        done, total,
-        benchmark: b.id, benchmarkIndex: bi + 1, benchmarkCount: benchmarks.length,
-        language: lang.id, languageIndex: li + 1, languageCount: active.length,
-        run: 0, runs: reps, phase: 'warmup',
-      });
-
       const { cmd, args } = tc.run(b.id, paramArgs({ ...b.params, ...(b.id === 'parallel' ? { threads: host.usableCores } : {}) }));
-      const env = { LB_TMPDIR: process.env.LB_TMPDIR || (host.env === 'docker' ? '/tmp' : path.join(ROOT, 'build')) };
+      return { lang, li, cmd, args, failed: null, samples: [], wall: [], rssMax: null, checksum: null };
+    });
 
-      let failed = null;
+    const prog = (slot, run, phase) => onEvent({
+      type: 'progress',
+      done, total,
+      benchmark: b.id, benchmarkIndex: bi + 1, benchmarkCount: benchmarks.length,
+      language: slot.lang.id, languageIndex: slot.li + 1, languageCount: active.length,
+      run, runs: reps, phase,
+    });
+
+    // Warmup cho mọi ngôn ngữ trước, để không ngôn ngữ nào bước vào vòng đo đầu tiên ở
+    // trạng thái "lạnh" hơn ngôn ngữ khác.
+    // Warm every language up first, so none enters the first measured round colder than
+    // the others.
+    for (const slot of slots) {
+      if (opts.signal?.aborted) break;
+      if (slot.failed) continue;
+      prog(slot, 0, 'warmup');
       for (let w = 0; w < warmup; w++) {
-        const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
-        if (r.error) { failed = r.error; break; }
+        const r = await measureOnce({ cmd: slot.cmd, args: slot.args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
+        if (r.error) { slot.failed = r.error; break; }
       }
+    }
 
-      const samples = [];
-      const wall = [];
-      let rssMax = null;
-      let checksum = null;
-
-      if (!failed) {
-        for (let i = 0; i < reps; i++) {
-          onEvent({
-            type: 'progress',
-            done, total,
-            benchmark: b.id, benchmarkIndex: bi + 1, benchmarkCount: benchmarks.length,
-            language: lang.id, languageIndex: li + 1, languageCount: active.length,
-            run: i + 1, runs: reps, phase: 'measure',
-          });
-          const r = await measureOnce({ cmd, args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
-          if (r.error) { failed = r.error; break; }
-          samples.push(b.metric === 'wall' ? r.wallMs : r.internalMs);
-          wall.push(r.wallMs);
-          if (r.rssBytes != null) rssMax = Math.max(rssMax ?? 0, r.rssBytes);
-          if (checksum === null) checksum = r.checksum;
-          else if (checksum !== r.checksum) { failed = `checksum không ổn định giữa các lần chạy (${checksum} rồi ${r.checksum})`; break; }
-          onEvent({
-            type: 'sample',
-            benchmark: b.id, language: lang.id, run: i + 1, runs: reps,
-            ms: samples[samples.length - 1], rssBytes: r.rssBytes, checksum: r.checksum,
-          });
-        }
+    // XEN KẼ: mỗi vòng đo một lượt qua tất cả ngôn ngữ, rồi mới sang vòng sau.
+    //
+    // Trước đây chạy hết mọi lần đo của một ngôn ngữ rồi mới sang ngôn ngữ kế tiếp, nên
+    // median của mỗi ngôn ngữ nằm gọn trong một khoảng thời gian riêng. Máy nóng dần, hay
+    // một tiến trình khác chen vào giữa lượt chạy, là ngôn ngữ đo sau chịu điều kiện khác
+    // ngôn ngữ đo trước — và sai lệch đó đi thẳng vào kết quả.
+    // Xen kẽ thì mỗi ngôn ngữ lấy mẫu rải khắp toàn bộ lượt chạy, nên nhiễu môi trường
+    // rơi lên cả bốn gần như bằng nhau thay vì dồn vào một.
+    //
+    // INTERLEAVED: one repetition of every language per round, then the next round.
+    //
+    // Every repetition of a language used to run back to back before moving on, so each
+    // language's median came from its own private window of time. A machine warming up, or
+    // another process arriving mid-run, gave the languages measured later different
+    // conditions from those measured first — and that bias landed straight in the result.
+    // Interleaving spreads each language's samples across the whole run, so environmental
+    // noise falls on all four roughly equally instead of concentrating on one.
+    for (let i = 0; i < reps; i++) {
+      if (opts.signal?.aborted) break;
+      for (const slot of slots) {
+        if (opts.signal?.aborted) break;
+        if (slot.failed) continue;
+        prog(slot, i + 1, 'measure');
+        const r = await measureOnce({ cmd: slot.cmd, args: slot.args, cwd: ROOT, env, timeoutMs: opts.timeoutMs, signal: opts.signal });
+        if (r.error) { slot.failed = r.error; continue; }
+        const ms = b.metric === 'wall' ? r.wallMs : r.internalMs;
+        slot.samples.push(ms);
+        slot.wall.push(r.wallMs);
+        if (r.rssBytes != null) slot.rssMax = Math.max(slot.rssMax ?? 0, r.rssBytes);
+        if (slot.checksum === null) slot.checksum = r.checksum;
+        else if (slot.checksum !== r.checksum) { slot.failed = `checksum không ổn định giữa các lần chạy (${slot.checksum} rồi ${r.checksum})`; continue; }
+        onEvent({
+          type: 'sample',
+          benchmark: b.id, language: slot.lang.id, run: i + 1, runs: reps,
+          ms, rssBytes: r.rssBytes, checksum: r.checksum,
+        });
       }
+    }
 
-      const stats = failed
-        ? { ok: false, error: failed }
+    // Chốt số cho từng ngôn ngữ sau khi mọi vòng đã xong.
+    // Settle each language once every round is finished.
+    for (const slot of slots) {
+      const stats = slot.failed || !slot.samples.length
+        ? { ok: false, error: slot.failed ?? 'không có mẫu nào / no samples' }
         : {
             ok: true,
-            median: median(samples),
-            min: Math.min(...samples),
-            max: Math.max(...samples),
-            stddev: stddev(samples),
-            samples,
-            wallMedian: median(wall),
-            startupOverheadMs: Math.max(0, median(wall) - median(samples)),
-            rssBytes: rssMax,
-            checksum,
+            median: median(slot.samples),
+            min: Math.min(...slot.samples),
+            max: Math.max(...slot.samples),
+            stddev: stddev(slot.samples),
+            samples: slot.samples,
+            wallMedian: median(slot.wall),
+            startupOverheadMs: Math.max(0, median(slot.wall) - median(slot.samples)),
+            rssBytes: slot.rssMax,
+            checksum: slot.checksum,
           };
-      results[b.id][lang.id] = stats;
-      if (!failed) results[b.id].checksums[lang.id] = checksum;
-
+      results[b.id][slot.lang.id] = stats;
+      if (stats.ok) results[b.id].checksums[slot.lang.id] = slot.checksum;
       done += 1;
-      onEvent({ type: 'measurement', benchmark: b.id, language: lang.id, stats, done, total });
+      onEvent({ type: 'measurement', benchmark: b.id, language: slot.lang.id, stats, done, total });
     }
 
     const seen = Object.values(results[b.id].checksums);

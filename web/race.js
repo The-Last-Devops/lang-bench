@@ -177,8 +177,7 @@ const target = {};                // điểm hiển thị = đã chốt + tạm 
 // số lớn sống suốt lượt chạy thay vì chỉ giật 48 nhịp.
 // Settled points move only when a measurement completes; provisional points move on
 // EVERY repetition, so the big number lives through the run instead of jerking 48 times.
-const settled = {};               // điểm đã chốt
-const prov = {};                  // điểm tạm của bài đang đo dở
+const provMs = {};                // provMs[langId] = {bench, ms} của bài đang đo dở
 const buf = {};                   // buf[langId] = các mẫu ms của bài đang đo dở
 const shown = {};                 // điểm đang hiển thị, bò dần tới target
 const pts = {};                   // pts[benchId][langId]
@@ -198,7 +197,7 @@ let running = false, dead = new Set();
 let startedAt = 0, elapsedMs = 0;   // đồng hồ giây cạnh nút Run / the seconds clock beside Run
 
 for (const l of LANGS) {
-  target[l.id] = 0; settled[l.id] = 0; prov[l.id] = 0; buf[l.id] = []; shown[l.id] = 0;
+  target[l.id] = 0; provMs[l.id] = null; buf[l.id] = []; shown[l.id] = 0;
   dGain[l.id] = dGainTo[l.id] = dMs[l.id] = dMsTo[l.id] = 0; dRatio[l.id] = '';
   twScore[l.id] = tween(); twGain[l.id] = tween(); twMs[l.id] = tween();
 }
@@ -468,7 +467,7 @@ function reset() {
   elapsedMs = 0;
   startedAt = running ? Date.now() : 0;
   for (const id of LANG_IDS) {
-    target[id] = 0; settled[id] = 0; prov[id] = 0; buf[id] = []; shown[id] = 0;
+    target[id] = 0; provMs[id] = null; buf[id] = []; shown[id] = 0;
     tweenSet(twScore[id], 0); tweenSet(twGain[id], 0); tweenSet(twMs[id], 0);
   }
   for (const k of Object.keys(pts)) delete pts[k];
@@ -649,19 +648,61 @@ function refFor(bench) {
 // Settled points are always REBUILT from the medians, never accumulated.
 // A derived mark drops as faster languages report, and every point already awarded for
 // that benchmark has to move with it — an accumulated total could not be corrected.
+/**
+ * Điểm tổng = 1000 × TRUNG BÌNH NHÂN của (mốc / median) trên các bài đã đo.
+ *
+ * Trước đây là phép CỘNG các điểm từng bài, và phép cộng tự đặt trọng số mà không ai chọn:
+ * bài nào cả bốn ngôn ngữ chạy nhanh hơn mốc thì ai cũng được trên 1000 và bài đó tự nặng
+ * lên. Thực tế `startup` chiếm 16% tổng điểm còn `matmul` chỉ 2.8% — gấp gần sáu lần, chỉ
+ * vì mốc của chúng đặt lệch nhau.
+ *
+ * Trung bình nhân cho mỗi bài trọng số ĐÚNG BẰNG NHAU, và thứ hạng không phụ thuộc vào việc
+ * chọn mốc nào — kết quả kinh điển của Fleming & Wallace (1986). Đây cũng là cách SPEC tính.
+ * Mốc vẫn cố định nên điểm vẫn không có trần: máy mạnh hơn vẫn được điểm cao hơn.
+ *
+ * Overall = 1000 x the GEOMETRIC MEAN of (reference / median) over the benchmarks measured.
+ *
+ * This used to SUM the per-benchmark points, and summing imposes a weighting nobody chose:
+ * a benchmark where all four beat the reference hands everyone over 1000 and thereby weighs
+ * more. In practice `startup` was 16% of the total and `matmul` 2.8% — nearly six times the
+ * pull, purely because their marks sat at different places.
+ *
+ * A geometric mean weighs every benchmark EQUALLY, and its ranking does not depend on which
+ * reference was picked — the classic Fleming & Wallace (1986) result. It is what SPEC does.
+ * The marks stay fixed, so the score still has no ceiling: a faster machine still scores higher.
+ */
+function totalFor(lang) {
+  let logSum = 0, n = 0;
+  for (const bench of Object.keys(mid)) {
+    const ref = refFor(bench);
+    const ms = mid[bench][lang];
+    if (ref && ms > 0) { logSum += Math.log(ref / ms); n += 1; }
+  }
+  // Bài đang đo dở góp một tỉ lệ tạm, để điểm nhích ngay chứ không đứng im tới cuối bài.
+  // The in-flight benchmark contributes a provisional ratio, so the score moves now rather
+  // than sitting still until the benchmark ends.
+  const p = provMs[lang];
+  if (p && !(mid[p.bench] && mid[p.bench][lang])) {
+    const ref = refFor(p.bench);
+    if (ref && p.ms > 0) { logSum += Math.log(ref / p.ms); n += 1; }
+  }
+  return n ? Math.round(1000 * Math.exp(logSum / n)) : 0;
+}
+
 function rescore() {
-  for (const id of LANG_IDS) settled[id] = 0;
+  // pts giữ điểm RIÊNG của từng bài (vẫn là 1000 × mốc/median) — dùng để chấm người thắng
+  // bài đó và dựng bảng chi tiết. Nó độc lập với cách gộp tổng.
+  // pts keeps each benchmark's OWN score (still 1000 x mark/median) for picking that
+  // benchmark's winner and building the detail panel. It is independent of how totals combine.
   for (const bench of Object.keys(mid)) {
     const ref = refFor(bench);
     if (!ref) continue;
     for (const [lang, ms] of Object.entries(mid[bench])) {
-      const p = Math.round(1000 * ref / ms);
-      (pts[bench] ??= {})[lang] = p;
-      if (settled[lang] !== undefined) settled[lang] += p;
+      (pts[bench] ??= {})[lang] = Math.round(1000 * ref / ms);
     }
   }
   for (const id of LANG_IDS) {
-    target[id] = settled[id] + prov[id];
+    target[id] = totalFor(id);
     tweenTo(twScore[id], target[id], TW_SCORE);
   }
 }
@@ -675,9 +716,9 @@ function onMeasurement(e) {
     (failed[benchmark] ??= {})[language] = stats.error ?? 'lỗi';
     // Bỏ điểm tạm của bài hỏng, nếu không nó dính lại vĩnh viễn.
     // Drop the failed benchmark's provisional points, or they stick forever.
-    prov[language] = 0;
+    provMs[language] = null;
     buf[language] = [];
-    target[language] = settled[language];
+    target[language] = totalFor(language);
     tweenTo(twScore[language], target[language], TW_SCORE);
     dead.add(language);
     if (row) { row.delta.style.opacity = 1; row.delta.textContent = 'FAIL'; }
@@ -685,11 +726,16 @@ function onMeasurement(e) {
   }
 
   updateClear();
+  // Điểm "ăn được" giờ là mức TỔNG dịch chuyển, không còn là điểm riêng của bài — với
+  // trung bình nhân, một bài không cộng thêm một lượng cố định mà kéo cả trung bình.
+  // The gain is now how far the TOTAL moved, not the benchmark's own score: under a
+  // geometric mean a benchmark does not add a fixed amount, it pulls the whole mean.
+  const before = totalFor(language);
   (mid[benchmark] ??= {})[language] = stats.median;
-  prov[language] = 0;
+  provMs[language] = null;
   buf[language] = [];
   rescore();
-  const gained = pts[benchmark][language];
+  const gained = totalFor(language) - before;
   sfxBlip();
 
   if (row && !noteUntil) {
@@ -785,8 +831,8 @@ function handle(e) {
       buf[e.language].push(e.ms);
       const q = [...buf[e.language]].sort((a, b) => a - b);
       const m = q.length % 2 ? q[(q.length - 1) / 2] : (q[q.length / 2 - 1] + q[q.length / 2]) / 2;
-      prov[e.language] = Math.round(1000 * refFor(e.benchmark) / m);
-      target[e.language] = settled[e.language] + prov[e.language];
+      provMs[e.language] = { bench: e.benchmark, ms: m };
+      target[e.language] = totalFor(e.language);
       tweenTo(twScore[e.language], target[e.language], TW_SCORE);
       break;
     }
