@@ -5,15 +5,29 @@
 #[path = "../_common/common.rs"]
 mod common;
 use common::*;
-use std::fmt::Write;
 
 fn main() {
     let n = param("n", 400000);
     let t = Timer::new();
 
+    // Chuyển số bằng tay, không dùng write!/format! — xem main.cpp để biết vì sao.
+    // Hand-rolled conversion instead of write!/format! — see main.cpp for why.
     let mut s = String::with_capacity((n as usize) * 4);
+    let mut buf = [0u8; 12];
     for i in 0..n {
-        let _ = write!(s, "{},", i % 1000);
+        let mut v = i % 1000;
+        let mut len = 0usize;
+        loop {
+            buf[len] = b'0' + (v % 10) as u8;
+            len += 1;
+            v /= 10;
+            if v == 0 { break; }
+        }
+        while len > 0 {
+            len -= 1;
+            s.push(buf[len] as char);
+        }
+        s.push(',');
     }
 
     // Cộng có trọng số theo vị trí: đổi chỗ hai ký tự là checksum đổi, khác với cộng thuần.

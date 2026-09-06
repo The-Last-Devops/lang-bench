@@ -334,6 +334,30 @@
       "notes": []
     },
     {
+      "id": "utf8",
+      "group": "C",
+      "runs": 5,
+      "params": {
+        "n": 6000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "duyệt UTF-8, 6 triệu ký tự",
+        "desc": "Bốn ngôn ngữ hiểu \"một ký tự\" theo bốn kiểu khác nhau — Go byte+rune, Rust UTF-8 có kiểm biên, JS UTF-16, C++ tự giải mã."
+      },
+      "en": {
+        "title": "UTF-8 walk, 6M characters",
+        "desc": "The four languages disagree about what a character is — Go bytes and runes, Rust checked UTF-8, JS UTF-16, C++ decoding by hand."
+      },
+      "notes": [
+        {
+          "lang": "node",
+          "vi": "Chuỗi JS là UTF-16, nên ký tự ngoài BMP chiếm hai đơn vị và phải ghép lại thành một điểm mã. Đó là chi phí thật của cách JS biểu diễn chuỗi, không phải lỗi của bài test.",
+          "en": "A JS string is UTF-16, so characters outside the BMP take two units that must be recombined into one code point. That is a real cost of how JS represents strings, not an artefact of the benchmark."
+        }
+      ]
+    },
+    {
       "id": "string-regex",
       "group": "C",
       "runs": 5,
@@ -403,39 +427,18 @@
       "group": "C",
       "runs": 5,
       "params": {
-        "iters": 200
+        "iters": 40
       },
       "metric": "internal",
       "vi": {
-        "title": "SHA-256 trên 200 MB",
-        "desc": "Băm khối 1 MB lặp lại — thực chất đo thư viện C bên dưới."
+        "title": "SHA-256 tự viết, 40 MB",
+        "desc": "Vòng nén SHA-256 viết tay theo FIPS 180-4, giống nhau ở cả bốn ngôn ngữ."
       },
       "en": {
-        "title": "SHA-256 over 200 MB",
-        "desc": "Hashing a 1 MB block repeatedly — really a measure of the C library underneath."
+        "title": "hand-written SHA-256, 40 MB",
+        "desc": "The FIPS 180-4 compression function written by hand, identical in all four languages."
       },
-      "notes": [
-        {
-          "lang": "cpp",
-          "vi": "Thư viện chuẩn C++ không có SHA-256, nên bài này dùng OpenSSL.",
-          "en": "The C++ standard library has no SHA-256, so this uses OpenSSL."
-        },
-        {
-          "lang": "php",
-          "vi": "hash() của PHP dùng SHA-256 tự cài trong extension hash, KHÔNG phải OpenSSL — nên nó không có lợi thế từ lệnh crypto của CPU.",
-          "en": "PHP's hash() uses the SHA-256 built into its own hash extension, NOT OpenSSL — so it gets no benefit from the CPU's crypto instructions."
-        },
-        {
-          "lang": "rust",
-          "vi": "Crate sha2 mặc định không bật asm; Node và Go gọi vào cài đặt có dùng lệnh crypto của ARM nên nhanh hơn nhiều.",
-          "en": "The sha2 crate ships without asm by default; Node and Go call into implementations that use ARM's crypto instructions and are much faster."
-        },
-        {
-          "lang": "java",
-          "vi": "MessageDigest của JDK có intrinsic dùng lệnh crypto của CPU — nên Java thường ngang C++/Go ở bài này.",
-          "en": "The JDK's MessageDigest has intrinsics using the CPU's crypto instructions — which is why Java usually ties C++/Go here."
-        }
-      ]
+      "notes": []
     },
     {
       "id": "file-io",

@@ -1,7 +1,18 @@
-// string-build — nối chuỗi và định dạng số, việc mà code thật làm nhiều nhất (log,
-// template, sinh HTML). Cách mỗi ngôn ngữ biểu diễn chuỗi lộ ra rõ nhất ở đây.
-// string-build — appending and number formatting, the thing real code does most (logs,
-// templates, HTML). How a language represents strings shows up most sharply here.
+// string-build — nối chuỗi và tự chuyển số sang thập phân, việc mà code thật làm nhiều nhất
+// (log, template, sinh HTML). Cách mỗi ngôn ngữ biểu diễn chuỗi lộ ra rõ nhất ở đây.
+//
+// Phần đổi số sang chuỗi được VIẾT TAY. Trước đây C++ dùng snprintf, Go dùng strconv, Rust
+// dùng write! — ba thứ đó khác nhau rất xa về chi phí: snprintf phải phân tích chuỗi định
+// dạng và tra locale ở mỗi lần gọi, còn write! của Rust được monomorphize thành mã chuyên
+// biệt. Đó là so THƯ VIỆN, và nó đang phạt oan C++.
+//
+// string-build — appending, and turning numbers into decimal by hand: what real code does
+// most (logs, templates, HTML). How a language represents strings shows most sharply here.
+//
+// The number-to-string step is HAND-WRITTEN. C++ used snprintf, Go strconv and Rust write!,
+// which differ enormously in cost: snprintf parses a format string and consults the locale on
+// every call, while Rust's write! monomorphises into specialised code. That compared
+// LIBRARIES, and it was penalising C++ for one.
 #include "common.hpp"
 #include <string>
 
@@ -11,11 +22,16 @@ int main(int argc, char** argv) {
 
   std::string s;
   s.reserve((size_t)n * 4);
-  char buf[16];
+  char buf[12];
   for (int i = 0; i < n; ++i) {
+    // Sinh chữ số từ phải sang trái rồi đảo lại — cách chuyển số nguyên sang thập phân
+    // ngắn nhất mà không cần chia nhiều lần hơn số chữ số.
+    // Digits are produced right to left and then reversed: the shortest integer-to-decimal
+    // conversion that never divides more times than there are digits.
     int v = i % 1000;
-    int len = snprintf(buf, sizeof buf, "%d", v);
-    s.append(buf, (size_t)len);
+    int len = 0;
+    do { buf[len++] = (char)('0' + v % 10); v /= 10; } while (v);
+    while (len > 0) s.push_back(buf[--len]);
     s.push_back(',');
   }
 

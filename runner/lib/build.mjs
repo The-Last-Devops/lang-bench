@@ -107,7 +107,6 @@ export async function buildAll({ root, registry, onLog, only }) {
       args.push('-I', path.join(bench, '_common'));
       args.push(src);
       args.push('-o', out);
-      if (id === 'crypto-hash') args.push('-lcrypto');
       if (id === 'parallel') args.push('-pthread');
       const r = await runCommand('c++', args, { cwd: root });
       if (r.code !== 0) {

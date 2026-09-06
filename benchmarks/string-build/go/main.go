@@ -5,7 +5,6 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 
 	"langbench/gocommon"
@@ -17,8 +16,24 @@ func main() {
 
 	var b strings.Builder
 	b.Grow(int(n) * 4)
+	// Chuyển số bằng tay, không dùng strconv — xem main.cpp để biết vì sao.
+	// Hand-rolled conversion instead of strconv — see main.cpp for why.
+	var buf [12]byte
 	for i := int64(0); i < n; i++ {
-		b.WriteString(strconv.FormatInt(i%1000, 10))
+		v := i % 1000
+		length := 0
+		for {
+			buf[length] = byte('0' + v%10)
+			length++
+			v /= 10
+			if v == 0 {
+				break
+			}
+		}
+		for length > 0 {
+			length--
+			b.WriteByte(buf[length])
+		}
 		b.WriteByte(',')
 	}
 	s := b.String()

@@ -12,8 +12,16 @@ const t = new Timer();
 // Plain concatenation, the way this is actually written in JS. V8 uses cons-strings, so
 // appending is cheap and the cost moves to reading; the benchmark reads it all back, so
 // both halves are counted.
+// Chuyển số bằng tay, không dùng phép nối ngầm number+string — xem main.cpp để biết vì sao.
+// Hand-rolled conversion instead of the implicit number+string coercion — see main.cpp.
+const DIGITS = '0123456789';
 let s = '';
-for (let i = 0; i < n; i++) s += (i % 1000) + ',';
+for (let i = 0; i < n; i++) {
+  let v = i % 1000;
+  let d = '';
+  do { d = DIGITS[v % 10] + d; v = (v / 10) | 0; } while (v);
+  s += d + ',';
+}
 
 // Cộng có trọng số theo vị trí: đổi chỗ hai ký tự là checksum đổi, khác với cộng thuần.
 // A position-weighted sum: swapping two characters changes it, unlike a plain sum.

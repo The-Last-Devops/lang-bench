@@ -1,22 +1,17 @@
 {
   "schema": 1,
-  "note": "Fixed reference time per benchmark, in milliseconds. Score = 1000 * ref / median, summed over benchmarks — unbounded, higher is better. Each mark is the fastest median seen the first time that benchmark ran, written back by the runner; because the mark IS the fastest median, every ratio lands in 0-1 and no benchmark can outweigh another.",
+  "note": "Fixed reference time per benchmark, in milliseconds. Score = 1000 * ref / median, summed over benchmarks. Each mark is the fastest median seen the first time that benchmark ran, written back by the runner. MARKS ARE ONLY MEANINGFUL WHEN DERIVED FROM A RUN THAT INCLUDED EVERY LANGUAGE: a mark taken from a Node-only run would hand Node 1000 points on that benchmark forever. sort, sort-objects, string-build, hashmap and crypto-hash have no mark because they were rewritten by hand; run the full set once, with all languages, to restore them.",
   "source": "đo lại toàn bộ ở 3 nhân, kiến trúc mỗi ngôn ngữ một container",
   "refMs": {
     "fib": 3.28,
     "matmul": 6.87,
     "primes": 14.95,
     "dijkstra": 16.04,
-    "hashmap": 553.93,
     "json": 82.98,
-    "sort": 46.19,
-    "sort-objects": 9.95,
     "alloc-gc": 30.63,
     "binary-trees": 142.95,
     "string-regex": 58.8,
     "base64": 5.63,
-    "string-build": 6.28,
-    "crypto-hash": 90.46,
     "file-io": 334.38,
     "parallel": 2.44,
     "startup": 1.69

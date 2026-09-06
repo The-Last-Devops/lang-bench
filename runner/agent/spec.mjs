@@ -83,7 +83,6 @@ export const SPECS = {
         if (fresh(out, [src, path.join(BENCH, '_common')])) { reused += 1; continue; }
         const args = ['-std=c++20', '-O3', ...(flag ? [flag] : []),
           '-I', path.join(BENCH, '_common'), src, '-o', out];
-        if (id === 'crypto-hash') args.push('-lcrypto');
         if (id === 'parallel') args.push('-pthread');
         const r = await run('c++', args);
         if (r.code !== 0) failures[id] = short(r.err);
