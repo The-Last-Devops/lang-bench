@@ -41,6 +41,14 @@ const STR = {
     memTitle: 'Bộ nhớ đỉnh (peak RSS)', memNote: 'lấy mức cao nhất trong các lần chạy',
     startupTitle: 'Chi phí khởi động', startupNote: 'thời gian tiến trình trừ đi thời gian làm việc',
     detailTitle: 'Chi tiết',
+    guideBtn: 'Hướng dẫn bài test này',
+    guideTitle: 'Bài test này làm gì',
+    guideWhat: 'Đo cái gì', guideHow: 'Chương trình làm gì',
+    guideChecksum: 'Checksum lấy từ đâu', guideWatch: 'Đọc cho đúng',
+    guideParams: 'Tham số', guideGroup: 'Nhóm', guideRuns: 'Số lần chạy', guideMetric: 'Cách bấm đồng hồ',
+    guideMissing: 'Bài này chưa có hướng dẫn. Thêm một mục vào benchmarks/guides.json.',
+    guideSource: 'Nội dung nằm ở benchmarks/guides.json',
+    close: 'Đóng',
     language: 'Ngôn ngữ', median: 'trung vị', wall: 'tiến trình', startupCost: 'khởi động',
     vsFastest: 'so nhanh nhất',
     savedRuns: 'Các lượt đã lưu', noRuns: 'Chưa có lượt nào được lưu.',
@@ -93,6 +101,14 @@ const STR = {
     memTitle: 'Peak memory (RSS)', memNote: 'highest across the repetitions',
     startupTitle: 'Startup cost', startupNote: 'process wall time minus in-program work time',
     detailTitle: 'Detail',
+    guideBtn: 'How this benchmark works',
+    guideTitle: 'What this benchmark does',
+    guideWhat: 'What it measures', guideHow: 'What the program does',
+    guideChecksum: 'Where the checksum comes from', guideWatch: 'Reading it correctly',
+    guideParams: 'Parameters', guideGroup: 'Group', guideRuns: 'Repetitions', guideMetric: 'Clock',
+    guideMissing: 'No guide for this benchmark yet. Add an entry to benchmarks/guides.json.',
+    guideSource: 'Text lives in benchmarks/guides.json',
+    close: 'Close',
     language: 'Language', median: 'median', wall: 'wall', startupCost: 'startup',
     vsFastest: 'vs fastest',
     savedRuns: 'Saved runs', noRuns: 'No runs saved yet.',
@@ -137,6 +153,8 @@ createApp({
     const progress = reactive({ done: 0, total: 0, benchmark: '', benchmarkIndex: 0, benchmarkCount: 0, language: '', languageIndex: 0, languageCount: 0, run: 0, runs: 0, phase: '' });
     const picked = reactive({ tests: [], langs: [], runs: 0, warmup: 2, quick: false });
     const selected = ref(null);
+    const guides = ref({});
+    const guideOpen = ref(false);
     const compareBase = ref(null);
     const baseRun = ref(null);
     const copied = ref(false);
@@ -162,6 +180,14 @@ createApp({
       registry.value = await (await fetch('/api/registry')).json();
       if (!picked.tests.length) picked.tests = registry.value.benchmarks.map((b) => b.id);
       if (!picked.langs.length) picked.langs = registry.value.languages.map((l) => l.id);
+    }
+    // Hướng dẫn đọc từ /api/guides, KHÔNG lấy từ snapshot registry trong file kết quả:
+    // sửa guides.json phải thấy ngay, kể cả khi đang xem một lượt chạy cũ.
+    // Guides come from /api/guides, NOT from the registry snapshot inside a result file:
+    // an edit to guides.json must show up at once, even while viewing an old run.
+    async function loadGuides() {
+      try { guides.value = (await (await fetch('/api/guides')).json()).guides ?? {}; }
+      catch { guides.value = {}; }
     }
     async function loadHost() {
       hostLive.value = (await (await fetch('/api/host')).json()).host;
@@ -455,6 +481,28 @@ createApp({
         };
       });
     });
+    /* ── hướng dẫn bài test (popup dấu ?) / benchmark guide (the ? popup) ── */
+    const selectedGuide = computed(() => {
+      const b = selectedBench.value;
+      if (!b) return null;
+      const g = guides.value[b.id];
+      const text = g ? (g[lang.value] ?? g.vi) : null;
+      return {
+        id: b.id,
+        title: b[lang.value]?.title ?? b.id,
+        group: b.group,
+        runs: b.runs,
+        metric: b.metric,
+        params: Object.entries(b.params ?? {}).map(([k, v]) => `${k} = ${v}`),
+        what: text?.what ?? null,
+        how: text?.how ?? [],
+        checksum: text?.checksum ?? null,
+        watch: text?.watch ?? [],
+        missing: !text,
+      };
+    });
+    watch(selected, () => { guideOpen.value = false; });
+
     const selectedNotes = computed(() => {
       const b = selectedBench.value;
       if (!b?.notes) return [];
@@ -573,7 +621,9 @@ createApp({
 
     onMounted(async () => {
       document.documentElement.lang = lang.value;
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') guideOpen.value = false; });
       await loadRegistry();
+      loadGuides();
       loadHost();
       await loadRuns();
       const status = await (await fetch('/api/status')).json();
@@ -589,7 +639,7 @@ createApp({
       testsIn, toggleTest, toggleLang, selectAllTests, bump, knobs, canRun, plannedCount, pct, progressCards,
       toolchainShort, startRun, loadRun,
       ranks, groupBars, winRows, resultColumns, sideCharts, axisTicks, gridStyle,
-      selectedBench, detailRows, selectedNotes, checksumSummary,
+      selectedBench, detailRows, selectedNotes, checksumSummary, selectedGuide, guideOpen,
       comparable, deltaGrid, deltaRows, allLangIds,
       hostShown, hostLine, machineRows, toolchainRows, methodNotes, copyMarkdown,
       fmtDate, fmtDur, fmtMs, fmtBytes,

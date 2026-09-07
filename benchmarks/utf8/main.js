@@ -11,7 +11,7 @@
 // TWO units that have to be recombined into one code point. `for..of` does that; `s[i]` does not.
 import { Timer, Checksum, Lcg, param, report } from '../_common/common.mjs';
 
-const n = param('n', 400000);
+const n = param('n', 6000000);
 
 // Bốn dải: ASCII 1 byte, Latin 2 byte, CJK 3 byte, ký hiệu 4 byte (khi mã hoá UTF-8).
 // Four ranges: ASCII at 1 byte, Latin at 2, CJK at 3, symbols at 4 once encoded as UTF-8.

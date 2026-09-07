@@ -20,7 +20,7 @@
 #include <vector>
 
 int main(int argc, char** argv) {
-  int n = (int)lb::param(argc, argv, "n", 400000);
+  int n = (int)lb::param(argc, argv, "n", 6000000);
 
   // Bốn dải: ASCII 1 byte, Latin 2 byte, CJK 3 byte, ký hiệu 4 byte.
   // Four ranges: ASCII at 1 byte, Latin at 2, CJK at 3, symbols at 4.

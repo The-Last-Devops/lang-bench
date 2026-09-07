@@ -7,7 +7,7 @@ mod common;
 use common::*;
 
 fn main() {
-    let n = param("n", 400000) as usize;
+    let n = param("n", 6000000) as usize;
 
     // Bốn dải: ASCII 1 byte, Latin 2 byte, CJK 3 byte, ký hiệu 4 byte.
     // Four ranges: ASCII at 1 byte, Latin at 2, CJK at 3, symbols at 4.

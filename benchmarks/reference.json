@@ -14,6 +14,14 @@
     "base64": 5.63,
     "file-io": 334.38,
     "parallel": 2.44,
-    "startup": 1.69
+    "startup": 1.69,
+    "hashmap": 119.07,
+    "sort": 215.31,
+    "sort-objects": 30.5,
+    "utf8": 8.32,
+    "string-build": 2.23,
+    "crypto-hash": 17.64,
+    "virtual-call": 52.05,
+    "lru-cache": 23.1
   }
 }

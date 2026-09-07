@@ -3,95 +3,18 @@
 // The vertical 9:16 race screen. Points land the moment each measurement
 // arrives from the runner — nothing waits for the run to finish.
 
-// Danh sách ngôn ngữ đến từ server (/api/languages), không viết cứng ở đây: mỗi service
-// trong docker-compose là một hàng trên màn hình, kể cả phiên bản thứ hai của cùng ngôn ngữ.
-// Bảng dưới chỉ là dự phòng khi chưa gọi được server.
-// The language list comes from the server (/api/languages) rather than living here: each
-// docker-compose service is a row on screen, second versions of a language included. The
-// table below is only the fallback for before the server answers.
-let LANGS = [
-  { id: 'cpp', label: 'C++', color: '#4C8DFF' },
-  { id: 'rust', label: 'Rust', color: '#F2703C' },
-  { id: 'go', label: 'Go', color: '#2FCBDE' },
-  { id: 'node', label: 'Node', color: '#8FD14F' },
-];
+// Danh sách ngôn ngữ, bộ màu và cách viết tên nằm ở langs.js — dùng chung với trang cover
+// để hai trang không bao giờ nói hai chuyện khác nhau.
+// The language list, palette and name rules live in langs.js — shared with the cover page so
+// the two can never tell two different stories.
+let LANGS = FALLBACK_LANGS;
 let LANG_IDS = LANGS.map((l) => l.id);
-
-/* Bảng màu này là của MÀN HÌNH, không lấy từ registry: registry mang màu của dashboard cũ,
-   chọn cho nền sáng và đọc rất kém trên nền tối ở đây.
-   Ngôn ngữ registry chưa biết — node20 chẳng hạn — nhận màu dẫn xuất từ ngôn ngữ gốc, làm
-   sáng lên để phân biệt được. Trùng màu hệt nhau thì hai hàng thành một khối không đọc nổi.
-   This palette belongs to the SCREEN, not to the registry: the registry carries the old
-   dashboard's colours, picked for a light ground and barely legible on this dark one.
-   A language the registry has not seen — node20, say — takes a shade derived from its base,
-   lightened so the two can be told apart; identical colours would fuse two rows into one. */
-// C++ xanh dương, Rust cam, Go cyan — nên khoảng màu còn trống cho Node là xanh lá đến
-// vàng. Ba phiên bản Node lấy ba sắc TÁCH BIỆT trong khoảng đó, không phải ba mức đậm nhạt
-// của cùng một màu: đậm nhạt thì ở cỡ thumbnail và trên clip nén sẽ nhìn ra một khối.
-// C++ takes blue, Rust orange, Go cyan, which leaves green through yellow for Node. The
-// three Node versions take three SEPARATE hues in that range rather than three tints of one
-// colour: tints fuse into a single block at thumbnail size and through video compression.
-/* BỘ MÀU cố định, chọn sẵn cho nền tối.
- *
- * IDENTITY giữ màu nhận diện của các ngôn ngữ gốc — người xem đã quen C++ xanh dương, Rust
- * cam. RAMP dành cho mọi thứ còn lại (node26, node24, …), gán theo THỨ TỰ xuất hiện nên bao
- * nhiêu ngôn ngữ cũng luôn được màu tách bạch.
- *
- * Các màu trong RAMP cách xa nhau về SẮC, không phải về đậm nhạt. Lần trước tôi cho ba bản
- * Node ba mức xanh–vàng và chúng dính vào nhau; qua nén video và ở cỡ thumbnail thì hai màu
- * gần nhau đọc ra làm một.
- *
- * A fixed PALETTE, chosen for the dark ground.
- *
- * IDENTITY keeps the base languages' recognisable colours — viewers already read C++ as blue
- * and Rust as orange. RAMP covers everything else (node26, node24, ...), assigned in ORDER of
- * appearance, so any number of languages still comes out distinguishable.
- *
- * RAMP's colours are separated by HUE, not by lightness. The three Node versions were first
- * given three green-to-yellow tints and they merged: through video compression and at
- * thumbnail size, neighbouring colours read as one.
- */
-const IDENTITY = {
-  cpp: '#4C8DFF', rust: '#F2703C', go: '#2FCBDE', node: '#8FD14F',
-  java: '#E0605F', php: '#9B8CFF', python: '#FFC94D', ruby: '#FF6B9D',
-};
-const RAMP = [
-  '#4ED17A', // xanh lá
-  '#FF9F45', // cam
-  '#B98CFF', // tím
-  '#37C5E8', // cyan
-  '#FF6B9D', // hồng
-  '#E8D44D', // vàng
-  '#7C9BFF', // xanh tím
-  '#4ECDB0', // ngọc
-];
-
-function lighten(hex, amount) {
-  const n = parseInt(hex.slice(1), 16);
-  const mix = (c) => Math.round(c + (255 - c) * amount);
-  return '#' + [mix(n >> 16), mix((n >> 8) & 255), mix(n & 255)]
-    .map((v) => v.toString(16).padStart(2, '0')).join('');
-}
-
-function assignColors(list) {
-  let next = 0;
-  return list.map((l) => IDENTITY[l.id] ?? RAMP[next++ % RAMP.length]);
-}
-
-// 'node26' → 'Node 26'; 'Node.js' → 'Node'. Tên dài làm hàng bị chật, mà cỡ chữ rất lớn.
-// 'node26' -> 'Node 26'; 'Node.js' -> 'Node'. Long names crowd the row, and the type is large.
-function shortLabel(l) {
-  const m = /^([a-z+]+?)(\d+)$/.exec(l.id);
-  if (m) return cap(m[1]) + ' ' + m[2];
-  if (l.id === 'node') return 'Node';
-  return (l.name || l.id).replace(/\.js$/, '');
-}
-const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage'), wins = $('wins'), board = $('board');
 const nowName = $('nowName'), footEnv = $('footEnv'), go = $('go'), clock = $('clock');
 const clr = $('clr'), tip = $('tip'), gate = $('gate'), gateLangs = $('gateLangs');
+const goOut = $('goOut'), infoOut = $('infoOut');
 const gateLead = $('gateLead'), gateCaveat = $('gateCaveat');
 const nowDots = $('nowDots');
 
@@ -306,6 +229,7 @@ function build() {
       '</div>' +
       '<div class="chip" style="background:' + l.color + '"></div>' +
       '<div class="name">' + l.label + '</div>' +
+      '<div class="pct"></div>' +
       '<div class="stat"></div>' +
       '<div class="note"></div>' +
       '<div class="delta" style="color:' + l.color + '"></div></div>' +
@@ -320,6 +244,7 @@ function build() {
       rankNum: el.querySelector('.rank span'),
       ring: el.querySelector('.ring'),
       note: el.querySelector('.note'),
+      pct: el.querySelector('.pct'),
       stat: el.querySelector('.stat'),
       delta: el.querySelector('.delta'),
     };
@@ -354,10 +279,15 @@ function showTip(i, el) {
     const isWin = p[l.id] !== undefined && p[l.id] === best;
     const score = f[l.id] ? 'FAIL' : p[l.id] !== undefined ? fmt(p[l.id]) : '—';
     const ms = f[l.id] ? '' : m[l.id] !== undefined ? m[l.id].toFixed(1) + ' ms' : '';
+    // Khoảng cách tính riêng trong bài này, so với ngôn ngữ thắng bài này — không phải so
+    // với người dẫn đầu tổng điểm.
+    // The gap is per benchmark, against whoever won this one — not against the overall leader.
+    const gap = f[l.id] ? '' : gapPct(p[l.id] ?? 0, best);
     return '<tr data-win="' + (isWin ? '1' : '0') + '">' +
       '<td class="c"><i style="background:' + l.color + '"></i></td>' +
       '<td class="n">' + l.label.toUpperCase() + '</td>' +
       '<td class="p">' + score + '</td>' +
+      '<td class="g">' + gap + '</td>' +
       '<td class="m">' + ms + '</td></tr>';
   }).join('');
 
@@ -387,12 +317,63 @@ function layout() {
   });
 }
 
+/**
+ * Khoảng cách tới người dẫn đầu, theo phần trăm điểm.
+ *
+ * Điểm tỉ lệ nghịch với thời gian, nên "thấp hơn 32% điểm" KHÔNG phải "chậm hơn 32%" — nó
+ * tương ứng với chậm hơn 1.46 lần. Ở đây hiển thị theo ĐIỂM vì đó là con số đang nằm ngay
+ * cạnh, và một dấu trừ đọc ra ngay là "kém người dẫn đầu bấy nhiêu".
+ *
+ * The gap to the leader, as a percentage of score.
+ *
+ * Score is inversely proportional to time, so "32% fewer points" is NOT "32% slower" — it
+ * corresponds to being 1.46x slower. This shows the SCORE gap because that is the figure
+ * sitting right beside it, and a minus sign reads immediately as "this far behind the lead".
+ */
+function gapPct(v, lead) {
+  if (!(lead > 0) || v <= 0) return '';
+  const d = Math.round((v / lead - 1) * 100);
+  return d === 0 ? '' : (d > 0 ? '+' : '') + d + '%';
+}
+
+/**
+ * Dọn kết quả của MỘT vòng: dòng ms, huy hiệu thứ hạng, quầng sáng, vạch mờ.
+ *
+ * Những thứ này mô tả một bài test, không phải bảng xếp hạng chung — để chúng nằm lại trên
+ * màn hình DONE là nói sai: thứ hạng của bài cuối gán lên tổng điểm, và người có điểm thấp
+ * nhất lại đeo số 1. F5 làm lỗi lộ rõ nhất, vì server phát lại mọi sự kiện tức thì nên
+ * trạng thái vòng cuối bị đóng băng ở đó.
+ *
+ * Clear ONE round's result: the ms line, the rank badge, the halo, the ghost bar.
+ *
+ * These describe a single benchmark, not the overall standing, and leaving them on the DONE
+ * screen states something false — the last benchmark's ranking sitting on the totals, with
+ * the lowest score wearing a number 1. A reload shows it worst, because the server replays
+ * every event at once and freezes the final round's state there.
+ */
+function clearRound() {
+  noteUntil = 0;
+  rows.forEach((r) => {
+    r.note.dataset.on = '0';
+    r.el.dataset.win = '0';
+    r.ghost.style.width = '0%';
+    clearTimeout(r.rankTimer);
+    r.rank.dataset.on = '0';
+    r.ring.dataset.on = '0';
+  });
+}
+
 function draw() {
   const lead = Math.max(...LANG_IDS.map((id) => shown[id]), 1);
   for (const r of rows) {
     r.score.textContent = fmt(shown[r.id]);
     r.bar.style.width = (shown[r.id] / lead * 100) + '%';
     r.el.dataset.out = dead.has(r.id) ? '1' : '0';
+    // Chỉ hiện ở kết quả cuối: trong lúc chạy thứ hạng đảo liên tục nên con số này nhảy
+    // loạn và không nói được gì.
+    // Only on the final result: mid-run the ranking keeps flipping, so this figure churns
+    // and says nothing.
+    r.pct.textContent = running ? '' : gapPct(shown[r.id], lead);
     if (r.note.dataset.on === '1') {
       r.note.innerHTML = dMsTo[r.id] > 0
         ? '<b>' + dMs[r.id].toFixed(1) + ' ms</b> · ' + dRatio[r.id] + ' · <b>+' + fmt(dGain[r.id]) + '</b>'
@@ -426,13 +407,7 @@ function tick() {
 
   // Kết quả vòng chỉ đứng lại một nhịp rồi nhường chỗ cho vòng sau.
   // A round's result holds for a beat, then clears the way for the next one.
-  if (noteUntil && Date.now() > noteUntil) {
-    noteUntil = 0;
-    rows.forEach((r) => {
-      r.note.dataset.on = '0'; r.el.dataset.win = '0'; r.ghost.style.width = '0%';
-      clearTimeout(r.rankTimer); r.rank.dataset.on = '0'; r.ring.dataset.on = '0';
-    });
-  }
+  if (noteUntil && Date.now() > noteUntil) clearRound();
   draw();
   if (moving) layout();
   if (running && startedAt) elapsedMs = Date.now() - startedAt;
@@ -448,8 +423,7 @@ async function boot() {
     fetch('/api/languages').then((r) => r.json()).catch(() => null),
   ]);
   if (langs?.languages?.length) {
-    const colors = assignColors(langs.languages);
-    LANGS = langs.languages.map((l, i) => ({ id: l.id, label: shortLabel(l), color: colors[i], v: version(l.version) }));
+    LANGS = buildLangs(langs.languages);
     LANG_IDS = LANGS.map((l) => l.id);
     for (const l of LANGS) {
       target[l.id] = 0; provMs[l.id] = null; buf[l.id] = []; shown[l.id] = 0;
@@ -460,8 +434,8 @@ async function boot() {
   benches = registry.benchmarks.map((b) => b.id);
   // Số bài lấy từ registry chứ không viết cứng: thêm bài là câu này tự đúng theo.
   // The count comes from the registry, never hard-coded: add a benchmark and it follows.
-  gateLead.textContent = leadLine(benches.length);
-  gateCaveat.textContent = caveatLine();
+  gateLead.textContent = leadLine(LANGS, benches.length);
+  gateCaveat.textContent = caveatLine(LANGS);
   refMs = reference.refMs;
   build();
 
@@ -476,9 +450,6 @@ async function boot() {
   const status = await fetch('/api/status').then((r) => r.json());
   if (status.running && (!ac || ac.state !== 'running')) showHint(true);
   setRunning(status.running);
-  // F5 giữa lượt chạy thì đừng che kết quả đang chạy bằng popup.
-  // Reloading mid-run must not cover the live results with the panel.
-  setGate(!status.running);
   connect();
   requestAnimationFrame(tick);
 }
@@ -509,58 +480,6 @@ function updateClear() {
 // lại. Vòng lặp là popup → chạy → kết quả → Clear → popup.
 // The panel is the only way in: open while the screen is idle, closed for the whole run,
 // reopened by Clear. The loop is panel → run → results → Clear → panel.
-/**
- * Câu mở đầu phải nói đúng thứ đang được đo.
- *
- * Bốn phiên bản Node là MỘT ngôn ngữ, không phải bốn — gọi là "4 ngôn ngữ lập trình" thì sai
- * hẳn, và người xem biết chút ít sẽ nhận ra ngay. Đếm theo ngôn ngữ GỐC (bỏ số phiên bản ở
- * cuối id), rồi chọn câu theo đúng tình huống.
- *
- * The opening line has to name what is actually being measured.
- *
- * Four Node versions are ONE language, not four; calling that "4 programming languages" is
- * simply wrong, and any viewer who knows a little will catch it. Count by BASE language —
- * the id with its version digits removed — and pick the wording that fits.
- */
-// Đang chạy nhiều phiên bản của MỘT ngôn ngữ hay nhiều ngôn ngữ khác nhau.
-// Whether this is several versions of ONE language, or several different languages.
-const baseIds = () => [...new Set(LANGS.map((l) => l.id.replace(/\d+$/, '')))];
-
-/**
- * Câu cảnh báo phải gọi đúng tên thứ đang so.
- *
- * Ghép cứng "ngôn ngữ / phiên bản" thì đọc lủng củng, mà để nguyên "ngôn ngữ" thì sai khi
- * đang chạy bốn bản Node. Đổi đúng một từ theo tình huống là gọn nhất, và câu vẫn trôi.
- *
- * The caveat has to name what is actually being compared.
- *
- * Writing "language / version" everywhere reads badly, and leaving it as "language" is wrong
- * while four Node versions are running. Swapping the single word to fit is the tidiest fix,
- * and the sentence still reads.
- */
-function caveatLine() {
-  const word = baseIds().length === 1 && LANGS.length > 1 ? 'Phiên bản' : 'Ngôn ngữ';
-  return `Kết quả chỉ để tham khảo. ${word} thắng ở đây không có nghĩa là nó sẽ nhanh hơn `
-    + 'trong dự án của bạn — điều đó còn tuỳ vào công việc cụ thể, cách bạn viết code, '
-    + 'thư viện bạn dùng và môi trường thực thi.';
-}
-
-function leadLine(benchCount) {
-  const bases = baseIds();
-  const tail = `, qua ${benchCount} bài test.`;
-  if (bases.length === 1 && LANGS.length > 1) {
-    const name = BASE_NAME[bases[0]] ?? cap(bases[0]);
-    return `Bài kiểm tra hiệu năng của ${LANGS.length} phiên bản ${name}${tail}`;
-  }
-  if (bases.length === LANGS.length) {
-    return `Bài kiểm tra hiệu năng của ${LANGS.length} ngôn ngữ lập trình${tail}`;
-  }
-  // Vừa nhiều ngôn ngữ vừa nhiều phiên bản: phải nói cả hai con số.
-  // Several languages and several versions at once: both numbers have to be said.
-  return `Bài kiểm tra hiệu năng của ${bases.length} ngôn ngữ lập trình, ${LANGS.length} phiên bản${tail}`;
-}
-
-const BASE_NAME = { cpp: 'C++', rust: 'Rust', go: 'Go', node: 'Node.js', java: 'Java', php: 'PHP', python: 'Python', ruby: 'Ruby' };
 
 function setGate(on) {
   gate.hidden = !on;
@@ -585,14 +504,6 @@ function fillGateLangs() {
   ).join('');
 }
 
-// Lấy đúng số phiên bản khỏi dòng --version. Mỗi toolchain in một kiểu khác nhau, nhưng
-// số phiên bản luôn là chuỗi số-chấm-số đầu tiên, nên một biểu thức là đủ cho cả bốn.
-// Pull the version number out of a --version line. Every toolchain prints a different
-// shape, but the version is always the first digit-dot-digit run, so one pattern covers all.
-function version(line) {
-  const m = /(\d+\.\d+(?:\.\d+)?)/.exec(line || '');
-  return m ? m[1] : '';
-}
 
 function setRunning(on) {
   // Bắt đầu thì khởi động đồng hồ; dừng thì giữ nguyên số cuối cùng.
@@ -600,7 +511,13 @@ function setRunning(on) {
   if (on && !running) startedAt = Date.now();
   if (!on) startedAt = 0;
   running = on;
+  // Hai nút Run: một trong popup, một ngoài khung. Cả hai phải cùng trạng thái, nếu không
+  // nút ngoài vẫn bấm được trong lúc đang chạy và gửi thêm một yêu cầu nữa.
+  // Two Run buttons: one in the panel, one outside the frame. They must share state, or the
+  // outside one stays clickable mid-run and fires a second request.
   go.disabled = on;
+  goOut.disabled = on;
+  goOut.textContent = on ? 'Running' : 'Run';
   updateClear();
   go.textContent = on ? 'Running' : 'Run';
 }
@@ -977,6 +894,9 @@ function handle(e) {
       setNow(null, false);
       break;
     case 'runFinished':
+      // Xong lượt chạy thì kết quả của vòng cuối phải đi, chỉ còn lại bảng tổng.
+      // When the run ends the final round's result must go, leaving only the totals.
+      clearRound();
       setStat(null, '');
       updateClear();
       setRunning(false);
@@ -1010,13 +930,19 @@ clr.onclick = async () => {
   setNow('READY', false);
   clearError();
   updateClear();
-  setGate(true);
   // Xoá cả nhật ký phát lại trên server, nếu không F5 sẽ dựng lại đúng bảng điểm vừa xoá.
   // Clear the server's replay log too, or a reload rebuilds the board that was just cleared.
   fetch('/api/clear', { method: 'POST' }).catch(() => {});
 };
 
-go.onclick = async () => {
+// Bấm nền tối là đóng popup; bấm vào thẻ thì không, nhờ so target.
+// Clicking the backdrop closes the panel; clicking the card does not, by comparing target.
+gate.onclick = (e) => { if (e.target === gate) setGate(false); };
+infoOut.onclick = () => setGate(gate.hidden);
+
+// Một hàm khởi chạy, dùng chung cho nút trong popup và nút ngoài khung.
+// One start function, shared by the button in the panel and the one outside the frame.
+async function startRun() {
   if (running) return;
   armAudio();
   sfxStart();
@@ -1032,11 +958,13 @@ go.onclick = async () => {
   });
   if (!res.ok) {
     setRunning(false);
-    setGate(true);
     setNow('READY', false);
     footEnv.textContent = en((await res.json()).error).slice(0, 60).toUpperCase();
     footEnv.dataset.bad = '1';
   }
-};
+}
+
+go.onclick = startRun;
+goOut.onclick = startRun;
 
 boot();

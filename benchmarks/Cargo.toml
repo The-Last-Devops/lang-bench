@@ -76,3 +76,11 @@ path = "sort-objects/main.rs"
 [[bin]]
 name = "utf8"
 path = "utf8/main.rs"
+
+[[bin]]
+name = "virtual-call"
+path = "virtual-call/main.rs"
+
+[[bin]]
+name = "lru-cache"
+path = "lru-cache/main.rs"

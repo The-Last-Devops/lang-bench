@@ -194,6 +194,16 @@ export function startServer({ port = 8080, host = '0.0.0.0' } = {}) {
         return sendJson(res, 200, { languages });
       }
 
+      // Hướng dẫn từng bài test — đọc trực tiếp từ file mỗi lần gọi, nên sửa guides.json
+      // là màn hình đổi ngay, không cần chạy lại benchmark hay khởi động lại server.
+      // Per-benchmark guides — read from disk on every request, so editing guides.json
+      // updates the screen immediately, with no re-run and no server restart.
+      if (p === '/api/guides') {
+        const f = path.join(ROOT, 'benchmarks', 'guides.json');
+        if (!fs.existsSync(f)) return sendJson(res, 200, { guides: {} });
+        return sendJson(res, 200, JSON.parse(fs.readFileSync(f, 'utf8')));
+      }
+
       if (p === '/api/reference') {
         return sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmarks', 'reference.json'), 'utf8')));
       }

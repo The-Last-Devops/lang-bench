@@ -1,0 +1,574 @@
+{
+  "schema": 1,
+  "_doc": "Hướng dẫn chi tiết từng bài test, hiện trong popup dấu ? ở tab Kết quả. Sửa file này là màn hình đổi ngay, không cần chạy lại benchmark. LUẬT: thêm hoặc sửa một bài test trong registry.json thì phải sửa mục tương ứng ở đây. / Per-benchmark guide shown in the ? popup on the Results tab. Editing this file updates the screen immediately, no re-run needed. RULE: adding or changing a benchmark in registry.json requires updating its entry here.",
+  "_fields": {
+    "what": "một câu: bài này đo cái gì / one sentence: what is being measured",
+    "how": "các bước chương trình làm, theo thứ tự / the steps the program takes, in order",
+    "checksum": "checksum băm từ đâu / what the checksum is hashed from",
+    "watch": "cạm bẫy khi đọc kết quả / pitfalls when reading the result"
+  },
+  "guides": {
+    "fib": {
+      "vi": {
+        "what": "Chi phí gọi hàm và dựng/huỷ khung stack — hầu như không có bộ nhớ và không có dữ liệu.",
+        "how": [
+          "Gọi fib(n) đệ quy thuần: fib(n-1) + fib(n-2), không nhớ đệm, không vòng lặp.",
+          "Với n = 32 là khoảng 7 triệu lần gọi hàm.",
+          "Đồng hồ bao quanh đúng lời gọi fib(n)."
+        ],
+        "checksum": "Băm từ giá trị fib(n) trả về (2178309 khi n = 32).",
+        "watch": [
+          "Đây là bài ngắn nhất (vài ms), nên chi phí khởi động của ngôn ngữ JIT ảnh hưởng mạnh — mỗi lần chạy là một tiến trình mới.",
+          "Kết quả ở đây KHÔNG nói được gì về tốc độ tính toán nói chung, chỉ nói về chi phí gọi hàm."
+        ]
+      },
+      "en": {
+        "what": "The cost of a function call and its stack frame — almost no memory and no data involved.",
+        "how": [
+          "Plain recursive fib(n): fib(n-1) + fib(n-2), no memoisation, no loop.",
+          "At n = 32 that is roughly 7 million calls.",
+          "The clock wraps the fib(n) call and nothing else."
+        ],
+        "checksum": "Hashed from the returned fib(n) value (2178309 at n = 32).",
+        "watch": [
+          "This is the shortest benchmark (a few ms), so JIT start-up weighs heavily — every repetition is a fresh process.",
+          "The result says nothing about general compute speed, only about call overhead."
+        ]
+      }
+    },
+    "matmul": {
+      "vi": {
+        "what": "Thông lượng vòng lặp số học dày đặc và hành vi cache trên mảng lớn.",
+        "how": [
+          "Sinh hai ma trận n×n bằng công thức cố định ((i*31+j*17)%100 và (i*13+j*7)%100) — nằm NGOÀI đồng hồ.",
+          "Nhân ma trận kiểu ngây thơ ba vòng lặp, thứ tự i-k-j để quét b theo hàng liên tục.",
+          "Cộng tổng toàn bộ ma trận kết quả."
+        ],
+        "checksum": "Băm từ tổng mọi ô của ma trận kết quả (~1.6e11, vẫn chính xác tuyệt đối trong 2^53).",
+        "watch": [
+          "Dùng SỐ NGUYÊN, không dùng số thực: clang tự vector hoá f64 mà rustc không, làm Rust có vẻ chậm 16.9× trên đoạn mã giống hệt nhau.",
+          "Python và Ruby thuần, KHÔNG numpy — numpy là thư viện C, không còn là so ngôn ngữ."
+        ]
+      },
+      "en": {
+        "what": "Throughput of dense arithmetic loops and cache behaviour over large arrays.",
+        "how": [
+          "Generate two n×n matrices from fixed formulas ((i*31+j*17)%100 and (i*13+j*7)%100) — OUTSIDE the clock.",
+          "Naive triple-loop multiply, ordered i-k-j so b is scanned along contiguous rows.",
+          "Sum every cell of the result matrix."
+        ],
+        "checksum": "Hashed from the sum of all result cells (~1.6e11, still exact within 2^53).",
+        "watch": [
+          "INTEGERS, not floats: clang auto-vectorises f64 where rustc does not, which made Rust look 16.9× slower on identical code.",
+          "Pure Python and Ruby, NO numpy — numpy is a C library, which stops being a language comparison."
+        ]
+      }
+    },
+    "primes": {
+      "vi": {
+        "what": "Vòng lặp chặt ghi rải rác trên một mảng byte lớn hơn cache.",
+        "how": [
+          "Cấp mảng byte n+1 phần tử (10 MB) rồi sàng Eratosthenes: với mỗi i chưa bị đánh dấu, đánh dấu i², i²+i, i²+2i…",
+          "Quét lại toàn mảng để đếm số nguyên tố và cộng tổng chúng.",
+          "Cả cấp phát và sàng đều nằm trong đồng hồ."
+        ],
+        "checksum": "Băm từ (số lượng số nguyên tố, tổng các số nguyên tố mod 2^32).",
+        "watch": [
+          "PHP và Ruby dùng chuỗi làm mảng byte (setbyte/getbyte) — mảng thường 10 triệu phần tử sẽ ngốn hàng trăm MB tới GB.",
+          "Bài này chạm bộ nhớ ngoài cache nên phần lớn thời gian là chờ RAM, không phải tính toán."
+        ]
+      },
+      "en": {
+        "what": "A tight loop writing scattered positions across a byte array larger than cache.",
+        "how": [
+          "Allocate an n+1 byte array (10 MB), then run the sieve of Eratosthenes: for each unmarked i, mark i², i²+i, i²+2i…",
+          "Sweep the array again to count primes and sum them.",
+          "Both the allocation and the sieve are inside the clock."
+        ],
+        "checksum": "Hashed from (prime count, sum of primes mod 2^32).",
+        "watch": [
+          "PHP and Ruby use a string as their byte array (setbyte/getbyte) — a plain 10-million array would cost hundreds of MB to GB.",
+          "The working set exceeds cache, so most of the time is waiting on RAM rather than computing."
+        ]
+      }
+    },
+    "virtual-call": {
+      "vi": {
+        "what": "Chi phí gọi phương thức khi kiểu đối tượng không đoán trước được (dispatch động).",
+        "how": [
+          "Dựng mảng n đối tượng trộn lẫn bốn lớp (Square, Rect, Tri, Line) theo thứ tự do LCG hạt 5 quyết định — ngoài đồng hồ.",
+          "Chạy 20 lượt quét mảng, mỗi phần tử gọi area() và cộng dồn kết quả (20 triệu lần gọi).",
+          "Đồng hồ bao quanh 20 lượt quét."
+        ],
+        "checksum": "Băm từ (tổng diện tích mod 2^32, số lượt quét).",
+        "watch": [
+          "Bốn lớp trộn lẫn là cố ý: cùng một lớp thì trình biên dịch/JIT inline hết và bài test mất nghĩa (với V8 đây là chỗ gọi megamorphic).",
+          "Đo dispatch, không đo phép tính — phần thân area() cố tình rẻ."
+        ]
+      },
+      "en": {
+        "what": "The cost of a method call when the object's type cannot be predicted (dynamic dispatch).",
+        "how": [
+          "Build an array of n objects mixing four classes (Square, Rect, Tri, Line) in an order fixed by LCG seed 5 — outside the clock.",
+          "Run 20 passes over the array, calling area() on each element and accumulating (20 million calls).",
+          "The clock wraps the 20 passes."
+        ],
+        "checksum": "Hashed from (area sum mod 2^32, pass count).",
+        "watch": [
+          "Mixing four classes is deliberate: with one class the compiler/JIT inlines everything and the benchmark means nothing (for V8 this is a megamorphic call site).",
+          "This measures dispatch, not arithmetic — the area() bodies are deliberately cheap."
+        ]
+      }
+    },
+    "dijkstra": {
+      "vi": {
+        "what": "Truy cập bộ nhớ rải rác cộng một cấu trúc dữ liệu có nhánh rẽ CPU không đoán được.",
+        "how": [
+          "Sinh đồ thị thưa 200k đỉnh, mỗi đỉnh 8 cung, lưu dạng CSR, cạnh và trọng số lấy từ LCG hạt 12345 — ngoài đồng hồ.",
+          "Chạy Dijkstra từ đỉnh 0 bằng heap nhị phân TỰ VIẾT (không dùng priority queue của thư viện), bỏ qua bản cũ lỗi thời trong heap.",
+          "Cộng tổng khoảng cách và đếm số đỉnh tới được."
+        ],
+        "checksum": "Băm từ (tổng khoảng cách, số đỉnh tới được) — hai giá trị này duy nhất bất kể heap phá hoà thế nào.",
+        "watch": [
+          "Khoảng cách vượt 2^32, ngôn ngữ nào dùng số 32-bit sẽ tràn âm thầm và cho checksum sai.",
+          "Phần dựng đồ thị nằm ngoài đồng hồ — chỉ tính phần tìm đường."
+        ]
+      },
+      "en": {
+        "what": "Scattered memory access plus a data structure whose branches the CPU cannot predict.",
+        "how": [
+          "Generate a sparse graph of 200k nodes with 8 edges each in CSR form, targets and weights from LCG seed 12345 — outside the clock.",
+          "Run Dijkstra from node 0 with a HAND-WRITTEN binary heap (no library priority queue), skipping stale heap entries.",
+          "Sum the distances and count reachable nodes."
+        ],
+        "checksum": "Hashed from (distance sum, reachable count) — both are unique however the heap breaks ties.",
+        "watch": [
+          "Distances exceed 2^32; a language using 32-bit integers would overflow silently and produce a wrong checksum.",
+          "Graph construction sits outside the clock — only the search is timed."
+        ]
+      }
+    },
+    "hashmap": {
+      "vi": {
+        "what": "Băm chuỗi, thăm dò tuyến tính và so sánh chuỗi — bảng băm tự viết, không dùng map của thư viện.",
+        "how": [
+          "Dựng sẵn 1 triệu khoá 'key0…' và 500k khoá 'nokey0…' không tồn tại — ngoài đồng hồ.",
+          "Cấp bảng địa chỉ mở, dung lượng lấy luỹ thừa 2 gần nhất ≥ 2n (hệ số tải 50%), băm FNV-1a, thăm dò tuyến tính, không bao giờ xoá.",
+          "Chèn 1 triệu khoá, tra lại 1 triệu khoá có (đếm hit, cộng giá trị), rồi tra 500k khoá không có (đếm miss)."
+        ],
+        "checksum": "Băm từ (tổng giá trị mod 2^32, số hit, số miss).",
+        "watch": [
+          "Tự viết bảng băm là cố ý: dùng std::unordered_map / HashMap / dict là so thư viện, không so ngôn ngữ.",
+          "Kết quả phụ thuộc mạnh vào cách ngôn ngữ biểu diễn chuỗi (con trỏ, độ dài, có cache hash sẵn hay không)."
+        ]
+      },
+      "en": {
+        "what": "String hashing, linear probing and string comparison — a hand-written table, not a library map.",
+        "how": [
+          "Pre-build 1 million 'key0…' keys plus 500k absent 'nokey0…' keys — outside the clock.",
+          "Allocate an open-addressing table sized to the next power of two ≥ 2n (50% load factor), FNV-1a hash, linear probing, never deletes.",
+          "Insert 1 million keys, look all of them up (count hits, sum values), then look up 500k absent keys (count misses)."
+        ],
+        "checksum": "Hashed from (value sum mod 2^32, hit count, miss count).",
+        "watch": [
+          "Hand-writing the table is deliberate: std::unordered_map / HashMap / dict would compare libraries, not languages.",
+          "Results depend heavily on how each language represents a string (pointer, length, cached hash or not)."
+        ]
+      }
+    },
+    "lru-cache": {
+      "vi": {
+        "what": "Cấu trúc dữ liệu hỗn hợp: bảng băm dây xích cộng danh sách liên kết đôi, cập nhật liên tục.",
+        "how": [
+          "Sinh sẵn 2 triệu khoá ngẫu nhiên trong khoảng 3×cap từ LCG hạt 31 — ngoài đồng hồ.",
+          "Cache dung lượng 100k dựng trên mảng phẳng: bảng băm dây xích để tra, danh sách liên kết đôi để giữ thứ tự dùng gần đây.",
+          "Chạy 2 triệu thao tác get-or-insert: hit thì đẩy node lên đầu danh sách, miss thì chèn mới và loại node ở cuối khi đầy."
+        ],
+        "checksum": "Băm từ (số hit, số miss, tổng giá trị đọc được mod 2^32).",
+        "watch": [
+          "Không dùng Map/LinkedHashMap dù chúng vốn giữ thứ tự chèn — lại là so thư viện.",
+          "Khoá trải trên 3× dung lượng nên tỉ lệ hit khoảng 1/3: bài test đo cả đường hit lẫn đường loại bỏ."
+        ]
+      },
+      "en": {
+        "what": "A composite data structure: a chained hash table plus a doubly linked list, updated constantly.",
+        "how": [
+          "Pre-generate 2 million random keys over a 3×cap space from LCG seed 31 — outside the clock.",
+          "Build a 100k-capacity cache over flat arrays: a chained hash table for lookup, a doubly linked list for recency order.",
+          "Run 2 million get-or-insert operations: a hit moves the node to the head, a miss inserts and evicts the tail when full."
+        ],
+        "checksum": "Hashed from (hits, misses, sum of values read mod 2^32).",
+        "watch": [
+          "Map/LinkedHashMap are avoided even though they already track insertion order — that would compare libraries again.",
+          "Keys span 3× the capacity, so the hit rate is about 1/3: both the hit path and the eviction path are exercised."
+        ]
+      }
+    },
+    "json": {
+      "vi": {
+        "what": "Vòng serialize/parse JSON — một trong hai bài CÒN dùng thư viện, cố ý.",
+        "how": [
+          "Dựng n record { id, name, score, active } — nằm TRONG đồng hồ.",
+          "Serialize toàn bộ mảng ra một chuỗi JSON, rồi parse chuỗi đó ngược lại.",
+          "Duyệt kết quả parse, cộng id, cộng score, đếm bản ghi active."
+        ],
+        "checksum": "Băm từ (tổng id, tổng score, số record active, độ dài chuỗi JSON).",
+        "watch": [
+          "Đây là bài SO THƯ VIỆN JSON của mỗi ngôn ngữ, không so ngôn ngữ — JSON.parse của V8 là code C++.",
+          "Độ dài chuỗi nằm trong checksum, nên thư viện nào thêm/bớt khoảng trắng sẽ lệch checksum."
+        ]
+      },
+      "en": {
+        "what": "A JSON serialise/parse round trip — one of the two benchmarks that still uses a library, deliberately.",
+        "how": [
+          "Build n records of { id, name, score, active } — INSIDE the clock.",
+          "Serialise the whole array to one JSON string, then parse it back.",
+          "Walk the parsed result, summing id and score and counting active records."
+        ],
+        "checksum": "Hashed from (id sum, score sum, active count, JSON string length).",
+        "watch": [
+          "This compares each language's JSON LIBRARY, not the language — V8's JSON.parse is C++ code.",
+          "The string length is part of the checksum, so a library that adds or drops whitespace will mismatch."
+        ]
+      }
+    },
+    "sort": {
+      "vi": {
+        "what": "Sắp xếp thuần: so sánh, di chuyển dữ liệu và băng thông bộ nhớ trên 3 triệu số nguyên.",
+        "how": [
+          "Sinh 3 triệu số nguyên 32-bit từ LCG hạt 42 vào mảng phẳng — ngoài đồng hồ.",
+          "Merge sort đáy-lên TỰ VIẾT: trộn từng cặp đoạn rộng 1, 2, 4… qua một mảng phụ, đổi vai hai mảng mỗi vòng.",
+          "Đảm bảo kết quả nằm ở mảng gốc trước khi tính checksum."
+        ],
+        "checksum": "Băm từ (phần tử đầu, phần tử cuối, tổng mỗi 1000 phần tử một mẫu).",
+        "watch": [
+          "Không dùng sort của thư viện: sort_unstable của Rust là pdqsort còn std::sort là introsort — chênh 4.5× là chênh THUẬT TOÁN, không phải ngôn ngữ. Tự viết thì còn 1.05×.",
+          "Cùng một thuật toán ở mọi ngôn ngữ là điều kiện để con số có nghĩa."
+        ]
+      },
+      "en": {
+        "what": "Sorting proper: comparisons, data movement and memory bandwidth over 3 million integers.",
+        "how": [
+          "Generate 3 million 32-bit integers from LCG seed 42 into a flat array — outside the clock.",
+          "HAND-WRITTEN bottom-up merge sort: merge runs of width 1, 2, 4… through a scratch array, swapping the two arrays each round.",
+          "Make sure the result lands back in the original array before checksumming."
+        ],
+        "checksum": "Hashed from (first element, last element, sum of every 1000th element).",
+        "watch": [
+          "No library sort: Rust's sort_unstable is pdqsort while std::sort is introsort — a 4.5× gap is an ALGORITHM gap, not a language gap. Hand-written, it drops to 1.05×.",
+          "The same algorithm in every language is what makes the number mean anything."
+        ]
+      }
+    },
+    "sort-objects": {
+      "vi": {
+        "what": "Sắp xếp bản ghi thật: chi phí truy cập thuộc tính, di chuyển đối tượng và truy cập gián tiếp.",
+        "how": [
+          "Sinh 400k bản ghi { key, id } (key từ LCG hạt 99) — ngoài đồng hồ.",
+          "Merge sort đáy-lên TỰ VIẾT trên mảng bản ghi, so theo cặp (key, id).",
+          "Cộng tổng có trọng số vị trí trên mảng đã sắp."
+        ],
+        "checksum": "Băm từ (tổng có trọng số vị trí, key đầu, key cuối).",
+        "watch": [
+          "Khoá so là CẶP (key, id) để thứ tự cuối cùng là duy nhất — nếu chỉ so key thì sort ổn định và không ổn định cho hai checksum khác nhau.",
+          "Dùng đối tượng thật, không dùng hai mảng phẳng song song: cách bố trí đối tượng trong bộ nhớ chính là thứ cần đo."
+        ]
+      },
+      "en": {
+        "what": "Sorting real records: property access, object movement and indirection costs.",
+        "how": [
+          "Generate 400k { key, id } records (key from LCG seed 99) — outside the clock.",
+          "HAND-WRITTEN bottom-up merge sort over the records, comparing the (key, id) pair.",
+          "Compute a position-weighted sum over the sorted array."
+        ],
+        "checksum": "Hashed from (position-weighted sum, first key, last key).",
+        "watch": [
+          "The comparison key is the PAIR (key, id) so the final order is unique — comparing key alone would give stable and unstable sorts two different checksums.",
+          "Real objects rather than two parallel flat arrays: object memory layout is exactly what this measures."
+        ]
+      }
+    },
+    "alloc-gc": {
+      "vi": {
+        "what": "Cấp phát và thu hồi hàng loạt đối tượng nhỏ, ngắn hạn — bộ cấp phát và GC lộ rõ nhất ở đây.",
+        "how": [
+          "Lặp 400 lô, mỗi lô dựng một danh sách liên kết 5000 node { value, next } (2 triệu node tổng cộng).",
+          "Duyệt hết danh sách cộng dồn value, rồi thả tham chiếu để cả lô thành rác.",
+          "Đồng hồ bao quanh toàn bộ 400 lô, tức là bao gồm cả phần GC dọn dẹp."
+        ],
+        "checksum": "Băm từ (tổng value mod 2^32, tổng số node đã cấp).",
+        "watch": [
+          "Phần dọn dẹp CỐ Ý nằm trong đồng hồ — đó là điều đang đo, nên ngôn ngữ có GC bị tính cả chi phí đó.",
+          "Kết quả nhạy với thời điểm GC chạy: σ lớn hơn các bài CPU thuần là bình thường."
+        ]
+      },
+      "en": {
+        "what": "Bulk allocation and reclamation of small, short-lived objects — where allocators and GCs differ most.",
+        "how": [
+          "Loop 400 batches, each building a 5000-node { value, next } linked list (2 million nodes in total).",
+          "Walk the list summing value, then drop the reference so the whole batch becomes garbage.",
+          "The clock wraps all 400 batches, so GC cleanup is included."
+        ],
+        "checksum": "Hashed from (value sum mod 2^32, total nodes allocated).",
+        "watch": [
+          "Cleanup is DELIBERATELY inside the clock — it is the thing being measured, so GC languages pay for it.",
+          "Sensitive to when the GC decides to run: a larger σ than the pure-CPU benchmarks is expected."
+        ]
+      }
+    },
+    "binary-trees": {
+      "vi": {
+        "what": "Cấp phát theo cụm với đồ thị đối tượng có hình dạng (cây), cộng đệ quy dựng và duyệt.",
+        "how": [
+          "Với mỗi độ sâu d = 4, 6, 8… đến 16: dựng 2^(16-d+4) cây nhị phân đầy độ sâu d.",
+          "Mỗi cây được duyệt đếm số node ngay sau khi dựng, rồi bỏ luôn cho bộ thu hồi lo.",
+          "Cây nông thì dựng nhiều lần hơn để mỗi vòng làm lượng việc tương đương."
+        ],
+        "checksum": "Băm từ tổng số node đã đếm qua mọi cây.",
+        "watch": [
+          "Khác alloc-gc ở chỗ đối tượng liên kết thành cây, không phải danh sách phẳng — con trỏ rải rác hơn.",
+          "Bài này đo bộ cấp phát nhiều hơn đo CPU: ngôn ngữ có GC theo thế hệ thường mạnh ở đây."
+        ]
+      },
+      "en": {
+        "what": "Clustered allocation of a shaped object graph (a tree), plus recursive build and traversal.",
+        "how": [
+          "For each depth d = 4, 6, 8… up to 16: build 2^(16-d+4) full binary trees of depth d.",
+          "Each tree is walked to count its nodes right after being built, then dropped for the collector.",
+          "Shallower trees are built more often so every round does comparable work."
+        ],
+        "checksum": "Hashed from the total node count across every tree.",
+        "watch": [
+          "Unlike alloc-gc the objects form a tree rather than a flat list — pointers are more scattered.",
+          "This measures the allocator more than the CPU: generational GCs usually do well here."
+        ]
+      }
+    },
+    "utf8": {
+      "vi": {
+        "what": "Duyệt chuỗi theo ĐIỂM MÃ Unicode — cách mỗi ngôn ngữ biểu diễn chuỗi lộ ra ở đây.",
+        "how": [
+          "Sinh 6 triệu điểm mã từ LCG hạt 2024, trải đều bốn dải: ASCII (1 byte), Latin (2), CJK (3), ký hiệu ngoài BMP (4 byte UTF-8).",
+          "Ghép thành một chuỗi theo từng khối 4096 ký tự rồi nối lại — ngoài đồng hồ.",
+          "Duyệt chuỗi theo điểm mã, cộng tổng có trọng số vị trí, đếm ký tự > 0x7F."
+        ],
+        "checksum": "Băm từ (tổng có trọng số, số ký tự nhiều byte, số ký tự đã duyệt).",
+        "watch": [
+          "Phải duyệt theo ĐIỂM MÃ, không theo byte hay theo đơn vị UTF-16 — s[i] trong JS cho kết quả khác và checksum sẽ lệch.",
+          "Ngôn ngữ dùng UTF-16 (JS, Java) trả giá cho cặp thay thế ở dải ký hiệu; đó là chi phí thật, không phải lỗi bài test."
+        ]
+      },
+      "en": {
+        "what": "Walking a string by Unicode CODE POINT — how each language represents strings shows up here.",
+        "how": [
+          "Generate 6 million code points from LCG seed 2024, spread evenly over four ranges: ASCII (1 byte), Latin (2), CJK (3), non-BMP symbols (4 bytes in UTF-8).",
+          "Assemble them into one string in 4096-character chunks and join — outside the clock.",
+          "Walk the string by code point, computing a position-weighted sum and counting characters > 0x7F."
+        ],
+        "checksum": "Hashed from (weighted sum, multi-byte character count, characters visited).",
+        "watch": [
+          "The walk must be by CODE POINT, not by byte or UTF-16 unit — JS's s[i] gives different results and mismatches the checksum.",
+          "UTF-16 languages (JS, Java) pay for surrogate pairs in the symbol range; that is a real cost, not a flaw in the benchmark."
+        ]
+      }
+    },
+    "string-regex": {
+      "vi": {
+        "what": "Engine regex của mỗi ngôn ngữ — bài CÒN LẠI cố ý dùng thư viện.",
+        "how": [
+          "Sinh 200k dòng log kiểu access-log từ LCG hạt 42, khoảng 20% có status 404/500 — ngoài đồng hồ.",
+          "Khớp từng dòng với một regex có 6 nhóm bắt (IP, ngày, method, path, status, bytes).",
+          "Đếm số dòng khớp, số POST, số status 200 và cộng tổng bytes."
+        ],
+        "checksum": "Băm từ (tổng bytes, số status 200, số POST, số dòng khớp).",
+        "watch": [
+          "Đây là SO ENGINE REGEX, không so ngôn ngữ: engine của V8 và PCRE viết bằng C++.",
+          "Regex được biên dịch một lần trước vòng lặp ở mọi ngôn ngữ — biên dịch lại mỗi dòng sẽ đo sang việc khác."
+        ]
+      },
+      "en": {
+        "what": "Each language's regex engine — the OTHER benchmark that deliberately uses a library.",
+        "how": [
+          "Generate 200k access-log style lines from LCG seed 42, about 20% carrying a 404/500 status — outside the clock.",
+          "Match each line against one regex with 6 capture groups (IP, date, method, path, status, bytes).",
+          "Count matched lines, POSTs and 200s, and sum the byte counts."
+        ],
+        "checksum": "Hashed from (byte sum, 200 count, POST count, matched count).",
+        "watch": [
+          "This compares REGEX ENGINES, not languages: V8's engine and PCRE are C++.",
+          "The pattern is compiled once before the loop in every language — recompiling per line would measure something else."
+        ]
+      }
+    },
+    "base64": {
+      "vi": {
+        "what": "Dịch bit và tra bảng liên tục trên mảng byte, đọc ghi tuần tự.",
+        "how": [
+          "Sinh 3 MB byte ngẫu nhiên từ LCG hạt 7, dựng bảng tra thuận và nghịch — ngoài đồng hồ.",
+          "Mã hoá base64 TỰ VIẾT: mỗi 3 byte thành 4 ký tự qua dịch bit và tra bảng, xử lý cả phần đệm '='.",
+          "Giải mã ngược lại về mảng byte, rồi tính tổng có trọng số vị trí cho cả bản mã và bản giải."
+        ],
+        "checksum": "Băm từ tổng có trọng số vị trí của chuỗi mã hoá và của dữ liệu giải mã lại.",
+        "watch": [
+          "Không dùng Buffer.toString('base64') hay tương đương — mọi ngôn ngữ phải chạy đúng cùng một đoạn mã.",
+          "Trọng số vị trí trong checksum bắt được cả sai giá trị lẫn sai thứ tự byte."
+        ]
+      },
+      "en": {
+        "what": "Continuous bit-shifting and table lookups over byte arrays, read and written sequentially.",
+        "how": [
+          "Generate 3 MB of random bytes from LCG seed 7 and build the forward and reverse tables — outside the clock.",
+          "HAND-WRITTEN base64 encode: every 3 bytes become 4 characters via shifts and lookups, '=' padding included.",
+          "Decode back to bytes, then compute position-weighted sums over both the encoded text and the decoded data."
+        ],
+        "checksum": "Hashed from the position-weighted sums of the encoded string and the decoded data.",
+        "watch": [
+          "No Buffer.toString('base64') or equivalent — every language must run the same code.",
+          "The position weighting catches both wrong bytes and wrong byte order."
+        ]
+      }
+    },
+    "string-build": {
+      "vi": {
+        "what": "Nối chuỗi và đổi số thành chữ — việc mà code thật làm nhiều nhất (log, template, sinh HTML).",
+        "how": [
+          "Lặp 400k lần: đổi i%1000 thành chữ số BẰNG TAY (chia 10 lấy dư), rồi nối vào chuỗi kèm dấu phẩy.",
+          "Đọc lại toàn bộ chuỗi kết quả, tính tổng có trọng số vị trí trên từng ký tự.",
+          "Cả phần nối và phần đọc lại đều nằm trong đồng hồ."
+        ],
+        "checksum": "Băm từ (tổng có trọng số vị trí, độ dài chuỗi cuối).",
+        "watch": [
+          "Đọc lại toàn bộ chuỗi là cố ý: V8 dùng cons-string nên nối rất rẻ và chi phí dồn sang lúc đọc — không đọc lại thì đo thiếu một nửa.",
+          "Đổi số bằng tay để không đo nhầm sang hàm định dạng của thư viện."
+        ]
+      },
+      "en": {
+        "what": "String appending and number-to-text conversion — what real code does most (logs, templates, HTML).",
+        "how": [
+          "Loop 400k times: convert i%1000 to digits BY HAND (divide and modulo by 10), then append it plus a comma.",
+          "Read the finished string back, computing a position-weighted sum over every character.",
+          "Both the appending and the read-back are inside the clock."
+        ],
+        "checksum": "Hashed from (position-weighted sum, final string length).",
+        "watch": [
+          "Reading the whole string back is deliberate: V8 uses cons-strings so appending is cheap and the cost moves to reading — skipping the read would measure only half the work.",
+          "Numbers are converted by hand so a library formatter is not measured instead."
+        ]
+      }
+    },
+    "crypto-hash": {
+      "vi": {
+        "what": "SHA-256 TỰ VIẾT trên 40 MB: phép dịch, xoay, xor và cộng 32-bit chạy liên tục trong thanh ghi.",
+        "how": [
+          "Dựng một khối 1 MB dữ liệu cố định theo công thức (i*31+7)&0xff — ngoài đồng hồ.",
+          "Băm khối đó 40 lần liên tiếp bằng SHA-256 tự cài (bảng K, mở rộng thông điệp, 64 vòng nén).",
+          "Đồng hồ bao quanh toàn bộ phần băm."
+        ],
+        "checksum": "Băm từ trạng thái hash cuối cùng — sai một vòng nén là lệch ngay.",
+        "watch": [
+          "Bỏ OpenSSL/sha2 là có lý do: dùng thư viện thì C++ nhanh 6.7× vì gọi assembly viết tay; tự viết thì Rust nhanh 1.55×. Con số đảo chiều hoàn toàn.",
+          "Đây là bài thuần thanh ghi, gần như không chạm RAM — kết quả nói về chất lượng sinh mã của trình biên dịch/JIT."
+        ]
+      },
+      "en": {
+        "what": "A HAND-WRITTEN SHA-256 over 40 MB: shifts, rotates, xors and 32-bit adds running entirely in registers.",
+        "how": [
+          "Build a fixed 1 MB block from (i*31+7)&0xff — outside the clock.",
+          "Hash that block 40 times in a row with the hand-rolled SHA-256 (K table, message schedule, 64 compression rounds).",
+          "The clock wraps the whole hashing phase."
+        ],
+        "checksum": "Hashed from the final hash state — one wrong compression round shows up immediately.",
+        "watch": [
+          "Dropping OpenSSL/sha2 was necessary: with libraries C++ was 6.7× faster because it calls hand-written assembly; hand-written, Rust is 1.55× faster. The result reverses entirely.",
+          "This is a pure register workload that barely touches RAM — it reports the compiler/JIT's code quality."
+        ]
+      }
+    },
+    "file-io": {
+      "vi": {
+        "what": "I/O đĩa tuần tự qua lớp file của mỗi ngôn ngữ — không đo CPU.",
+        "how": [
+          "Dựng sẵn một buffer 1 MB theo công thức cố định — ngoài đồng hồ.",
+          "Ghi buffer đó 256 lần vào một file tạm, rồi fsync để dữ liệu thật sự xuống đĩa, rồi đóng file.",
+          "Đọc lại toàn bộ file theo từng khối 1 MB, chỉ cộng 4 KB đầu mỗi khối để phần xác minh không lấn thời gian I/O.",
+          "Xoá file sau khi đã bấm đồng hồ."
+        ],
+        "checksum": "Băm từ (tổng các mẫu 4 KB, số MB đọc được, số MB yêu cầu).",
+        "watch": [
+          "Đây là một trong hai ngoại lệ được dùng thư viện: bài đo hệ điều hành và runtime, không có gì để tự viết.",
+          "Kết quả phụ thuộc vào đĩa, filesystem và page cache của máy chủ — so giữa các máy khác nhau là vô nghĩa."
+        ]
+      },
+      "en": {
+        "what": "Sequential disk I/O through each language's file layer — not a CPU benchmark.",
+        "how": [
+          "Pre-build a 1 MB buffer from a fixed formula — outside the clock.",
+          "Write it 256 times to a temporary file, fsync so the data really reaches the disk, then close.",
+          "Read the file back in 1 MB chunks, summing only the first 4 KB of each so verification does not crowd out the I/O.",
+          "Delete the file after the clock stops."
+        ],
+        "checksum": "Hashed from (sum of the 4 KB samples, MB actually read, MB requested).",
+        "watch": [
+          "One of the two library exceptions: it measures the OS and runtime, and there is nothing to hand-write.",
+          "The number depends on the host's disk, filesystem and page cache — comparing across machines is meaningless."
+        ]
+      }
+    },
+    "parallel": {
+      "vi": {
+        "what": "Khả năng dùng nhiều lõi: cùng bài matmul, nhưng chia cho các luồng chạy song song.",
+        "how": [
+          "Sinh hai ma trận n×n giống hệt bài matmul, đặt trong bộ nhớ chia sẻ được — ngoài đồng hồ.",
+          "Chia dải hàng cho số luồng bằng số lõi được cấp (threads = 0 nghĩa là tự lấy theo hạn mức container).",
+          "Đợi mọi luồng xong rồi cộng tổng toàn bộ ma trận kết quả."
+        ],
+        "checksum": "Băm từ tổng mọi ô kết quả — TRÙNG với checksum của bài matmul, vì cùng phép tính.",
+        "watch": [
+          "Hạn mức CPU phải giống nhau ở mọi container, nếu lệch thì mỗi ngôn ngữ mở số luồng khác nhau và phép so mất nghĩa.",
+          "Đọc kèm bài matmul: chênh lệch giữa hai bài mới là phần nói về mô hình đa luồng của ngôn ngữ."
+        ]
+      },
+      "en": {
+        "what": "Multi-core capability: the same matmul work, split across parallel threads.",
+        "how": [
+          "Generate the same two n×n matrices as matmul, in shareable memory — outside the clock.",
+          "Split row ranges across as many threads as there are available cores (threads = 0 means read the container's limit).",
+          "Join every thread, then sum the whole result matrix."
+        ],
+        "checksum": "Hashed from the sum of all result cells — IDENTICAL to matmul's, since the computation is the same.",
+        "watch": [
+          "CPU limits must be identical across containers; otherwise each language opens a different number of threads and the comparison collapses.",
+          "Read it next to matmul: the gap between the two is what says something about the language's threading model."
+        ]
+      }
+    },
+    "startup": {
+      "vi": {
+        "what": "Thời gian từ lúc gọi tiến trình đến lúc nó in xong một dòng và thoát.",
+        "how": [
+          "Chương trình chỉ in đúng một dòng kết quả cố định rồi thoát — không dùng helper chung, không tính toán gì.",
+          "Runner đo bằng đồng hồ NGOÀI (metric wall): tính cả nạp runtime, khởi tạo VM, JIT khởi động.",
+          "Không có phần việc nào để bấm đồng hồ bên trong."
+        ],
+        "checksum": "Hằng số cố định — bài này không tính toán gì để mà xác minh.",
+        "watch": [
+          "Đây là bài DUY NHẤT dùng metric wall, ngược với luật 'đồng hồ chỉ bao quanh phần việc được đo' — vì phần việc chính là khởi động.",
+          "Mốc lệch ở bài này từng làm startup chiếm 16% tổng điểm; nó có trọng số bằng mọi bài khác, đừng để nó dẫn dắt kết luận."
+        ]
+      },
+      "en": {
+        "what": "The time from invoking the process to it printing one line and exiting.",
+        "how": [
+          "The program prints one fixed result line and exits — no shared helpers, no computation.",
+          "The runner times it with an OUTSIDE clock (wall metric), so runtime loading, VM init and JIT warm-up all count.",
+          "There is no work to time from the inside."
+        ],
+        "checksum": "A fixed constant — there is no computation to verify.",
+        "watch": [
+          "The ONLY benchmark using the wall metric, against the rule that 'the clock wraps only the measured work' — here the start-up IS the work.",
+          "A skewed reference once let startup take 16% of the total score; it carries the same weight as every other benchmark, so do not let it drive conclusions."
+        ]
+      }
+    }
+  }
+}

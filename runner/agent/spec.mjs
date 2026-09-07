@@ -129,6 +129,63 @@ export const SPECS = {
     build: async () => ({ failures: {}, reused: 0, note: 'không cần build / no build step' }),
     cmd: (id, params) => ({ cmd: process.execPath, args: [path.join(BENCH, id, 'main.js'), ...params] }),
   },
+
+  php: {
+    version: async () => firstLine((await run('php', ['--version'])).out),
+    build: async () => ({ failures: {}, reused: 0, note: 'không cần build / no build step' }),
+    // memory_limit=-1: mặc định 128 MB không đủ cho bài sort và hashmap.
+    // JIT bật tường minh, vì PHP tắt JIT theo mặc định và để nguyên thì đây thành phép đo
+    // của trình thông dịch chứ không phải của PHP như người ta chạy trong sản xuất.
+    // memory_limit=-1: the 128 MB default is not enough for sort or hashmap.
+    // JIT is enabled explicitly: PHP ships it off, and leaving it off would measure the
+    // interpreter rather than PHP as it actually runs in production.
+    cmd: (id, params) => ({
+      cmd: 'php',
+      args: [
+        '-d', 'memory_limit=-1',
+        '-d', 'opcache.enable_cli=1',
+        '-d', 'opcache.jit=tracing',
+        '-d', 'opcache.jit_buffer_size=128M',
+        path.join(BENCH, id, 'main.php'),
+        ...params,
+      ],
+    }),
+  },
+
+  pascal: {
+    version: async () => firstLine((await run('fpc', ['-iW'])).out).trim(),
+    async build(ids) {
+      const outDir = path.join(BUILD, 'pascal');
+      // -FU: thư mục cho .ppu/.o trung gian. Không chỉ định thì fpc rải chúng cạnh mã
+      // nguồn, tức là ghi vào thư mục benchmarks đang mount vào MỌI container.
+      // -FU: where the intermediate .ppu/.o go. Left unset, fpc drops them next to the
+      // sources — writing into the benchmarks directory mounted into EVERY container.
+      const unitDir = path.join(outDir, 'units');
+      fs.mkdirSync(unitDir, { recursive: true });
+      const common = path.join(BENCH, '_common');
+      const failures = {};
+      let reused = 0;
+      for (const id of ids) {
+        const out = path.join(outDir, id);
+        const src = path.join(BENCH, id, 'main.pas');
+        if (fresh(out, [src, common])) { reused += 1; continue; }
+        const args = ['-O3', '-Mobjfpc', '-Sh', '-vw', `-Fu${common}`, `-FU${unitDir}`,
+          `-o${out}`, src];
+        const r = await run('fpc', args, { cwd: BENCH });
+        // fpc báo lỗi ra STDOUT chứ không phải stderr, khác mọi trình biên dịch khác ở đây.
+        // fpc reports errors on STDOUT, not stderr, unlike every other compiler here.
+        if (r.code !== 0) failures[id] = short(r.out || r.err);
+      }
+      return { failures, reused, note: 'fpc -O3 -Mobjfpc' };
+    },
+    cmd: (id, params) => ({ cmd: path.join(BUILD, 'pascal', id), args: params }),
+  },
+
+  python: {
+    version: async () => firstLine((await run('python3', ['--version'])).out),
+    build: async () => ({ failures: {}, reused: 0, note: 'không cần build / no build step' }),
+    cmd: (id, params) => ({ cmd: 'python3', args: [path.join(BENCH, id, 'main.py'), ...params] }),
+  },
 };
 
 // LB_KIND nói dùng đặc tả nào; LB_LANG là danh tính hiển thị. Hai thứ tách nhau để chạy

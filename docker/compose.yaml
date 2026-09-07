@@ -49,14 +49,20 @@ services:
       # chỉ cần bỏ nó khỏi đây; service vẫn còn nguyên bên dưới, thêm lại là chạy tiếp.
       # THIS LINE decides which languages are measured, not the code. Dropping one means
       # taking it off this list; the service stays defined below, ready to come back.
+      # `node=` trỏ vào container node24: tên bên trái là danh tính hiển thị, nên cùng một
+      # container chạy được dưới tên `node24` khi so phiên bản, hoặc `node` khi so ngôn ngữ.
+      # `node=` points at the node24 container: the name on the left is the display identity,
+      # so one container serves as `node24` when comparing versions and `node` when comparing
+      # languages.
       LB_AGENTS: >-
-        node26=http://node26:8100,
-        node24=http://node24:8100,
-        node22=http://node22:8100,
-        node20=http://node20:8100
+        cpp=http://cpp:8100,
+        pascal=http://pascal:8100,
+        rust=http://rust:8100
       # Tạm bỏ, thêm lại vào LB_AGENTS ở trên là chạy:
       # Temporarily out; put them back on LB_AGENTS above to run them:
-      #   cpp=http://cpp:8100, rust=http://rust:8100, go=http://go:8100
+      #   go=http://go:8100, php=http://php:8100, python=http://python:8100
+      #   node=http://node24:8100
+      #   node26=http://node26:8100, node22=http://node22:8100, node20=http://node20:8100
     volumes:
       - ../benchmarks:/bench/benchmarks
       - ../runner:/bench/runner:ro
@@ -65,7 +71,7 @@ services:
       - ../results:/bench/results
     ports:
       - "${LB_PORT:-8090}:8080"
-    depends_on: [node26, node24, node22, node20]
+    depends_on: [cpp, pascal, rust]
 
   cpp:
     <<: *agent
@@ -114,6 +120,48 @@ services:
   # 26 là current, 24 và 22 là LTS đang được dùng thật trong sản xuất.
   # Three Node versions side by side, which one shared image could not do.
   # 26 is current; 24 and 22 are the LTS lines actually running in production.
+  php:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/php.Dockerfile
+    image: lang-bench-php:latest
+    environment:
+      LB_KIND: php
+      LB_LANG: php
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-php:/build
+
+  python:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/python.Dockerfile
+    image: lang-bench-python:latest
+    environment:
+      LB_KIND: python
+      LB_LANG: python
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-python:/build
+
+  pascal:
+    <<: *agent
+    build:
+      context: ..
+      dockerfile: docker/lang/pascal.Dockerfile
+    image: lang-bench-pascal:latest
+    environment:
+      LB_KIND: pascal
+      LB_LANG: pascal
+    volumes:
+      - ../benchmarks:/bench/benchmarks
+      - ../runner:/bench/runner:ro
+      - build-pascal:/build
+
   node26:
     <<: *agent
     build:
@@ -186,4 +234,7 @@ volumes:
   build-node24:
   build-node22:
   build-node20:
+  build-php:
+  build-python:
+  build-pascal:
   go-cache:

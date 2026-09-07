@@ -51,6 +51,13 @@
       "source": "main.py"
     },
     {
+      "id": "pascal",
+      "name": "Pascal",
+      "color": "#0f8b8d",
+      "kind": "compiled",
+      "source": "main.pas"
+    },
+    {
       "id": "ruby",
       "name": "Ruby",
       "color": "#e65188",
@@ -164,6 +171,25 @@
       ]
     },
     {
+      "id": "virtual-call",
+      "group": "A",
+      "runs": 5,
+      "params": {
+        "n": 1000000,
+        "passes": 20
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "gọi hàm ảo, 20 triệu lần",
+        "desc": "Mảng trộn lẫn bốn kiểu đối tượng, gọi cùng một phương thức — chỗ gọi megamorphic nên không đoán được đích."
+      },
+      "en": {
+        "title": "virtual dispatch, 20M calls",
+        "desc": "An array of four mixed object kinds with one method called on each: a megamorphic call site whose target cannot be predicted."
+      },
+      "notes": []
+    },
+    {
       "id": "dijkstra",
       "group": "A",
       "runs": 5,
@@ -198,6 +224,25 @@
         "title": "1 million string keys",
         "desc": "Insert, hit and miss lookups on the standard library hash table."
       }
+    },
+    {
+      "id": "lru-cache",
+      "group": "B",
+      "runs": 5,
+      "params": {
+        "cap": 100000,
+        "ops": 2000000
+      },
+      "metric": "internal",
+      "vi": {
+        "title": "cache LRU, 2 triệu thao tác",
+        "desc": "Bảng băm cộng danh sách liên kết đôi, có đuổi phần tử — khác hashmap ở chỗ phải xoá và nối lại danh sách."
+      },
+      "en": {
+        "title": "LRU cache, 2M operations",
+        "desc": "A hash table plus a doubly linked list with eviction — unlike hashmap it deletes and relinks."
+      },
+      "notes": []
     },
     {
       "id": "json",

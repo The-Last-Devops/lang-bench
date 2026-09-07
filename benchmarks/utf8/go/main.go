@@ -7,7 +7,7 @@ package main
 import "langbench/gocommon"
 
 func main() {
-	n := int(common.Param("n", 400000))
+	n := int(common.Param("n", 6000000))
 
 	// Bốn dải: ASCII 1 byte, Latin 2 byte, CJK 3 byte, ký hiệu 4 byte.
 	// Four ranges: ASCII at 1 byte, Latin at 2, CJK at 3, symbols at 4.

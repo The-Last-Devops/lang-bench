@@ -34,18 +34,17 @@ canvas{width:auto;height:auto;max-width:calc(100vw - 40px);max-height:calc(100vh
   <span>1080 &times; 1920</span>
 </div>
 
+<script src="./langs.js"></script>
 <script>
 const W = 1080, H = 1920;
 const BG = '#0B0E13', INK = '#E7ECF3', DIM = '#B4C0D0', HAIR = '#222A36';
-const LANGS = [
-  { id:'cpp',  label:'C++',  color:'#4C8DFF', v:'14.2.0'  },
-  { id:'rust', label:'Rust', color:'#F2703C', v:'1.96.0'  },
-  { id:'go',   label:'Go',   color:'#2FCBDE', v:'1.27.0'  },
-  { id:'node', label:'Node', color:'#8FD14F', v:'22.16.0' },
-];
-const BENCHES = ['fib','matmul','primes','dijkstra','hashmap','json','sort','sort-objects',
-  'alloc-gc','binary-trees','string-regex','base64','string-build','crypto-hash','file-io',
-  'parallel','startup'];
+// Ngôn ngữ và danh sách bài test đều HỎI server, giống màn hình đua: cover là khung hình
+// đầu của clip, viết cứng ở đây là ảnh bìa và nội dung clip nói hai chuyện khác nhau.
+// Languages and the benchmark list are both ASKED of the server, exactly as the race screen
+// does: the cover is the clip's first frame, and hard-coding it makes the cover contradict
+// the clip it introduces.
+let LANGS = FALLBACK_LANGS;
+let BENCHES = [];
 
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
@@ -55,45 +54,68 @@ const sans = (w, px) => `${w} ${px}px 'Barlow Semi Condensed', sans-serif`;
 const mono = (w, px) => `${w} ${px}px 'JetBrains Mono', monospace`;
 const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
 const bg = () => { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); };
+// Số bài lấy từ registry, chữ "ngôn ngữ / phiên bản" lấy từ langs.js — cùng một luật với
+// câu mở đầu của màn hình đua.
+// The count comes from the registry and the "language / version" wording from langs.js —
+// the same rule the race screen's opening line follows.
+const footLine = () => `${BENCHES.length} BÀI TEST · CÙNG MỘT THUẬT TOÁN`;
+const titleLines = () => coverTitle(LANGS);
+
+// Độ dài/độ cao các thanh chỉ là hình trang trí, không phải số đo thật — nên chúng được
+// SINH theo số ngôn ngữ, giảm dần, thay vì đọc từ một bảng bốn phần tử viết cứng.
+// The bar lengths are decoration, not measurements — so they are GENERATED from the number
+// of languages, tapering off, instead of read from a hard-coded table of four.
+const taper = (n, hi, lo) => Array.from({ length: n }, (_, i) => (n === 1 ? hi : hi - (hi - lo) * (i / (n - 1))));
+
 const title = (lines, x, y, px, color) => {
   ctx.font = sans(700, px); ctx.fillStyle = color || INK;
   for (const l of lines) { ctx.fillText(l, x, y); y += px * 0.97; }
   return y;
 };
 
-/* 1 — LANES. Bốn làn màu tràn hết bề ngang, dài ngắn khác nhau: ở cỡ thumbnail thì hình
-   khối và màu đọc được, còn chữ thì không. Đây là thứ quyết định một cover TikTok.
-   Four full-bleed lanes of different lengths: at thumbnail size the shapes and colours read
-   and the words do not, which is what actually decides a TikTok cover. */
+/* 1 — LANES. Một làn màu tràn bề ngang cho mỗi ngôn ngữ đang chạy, dài ngắn khác nhau: ở cỡ
+   thumbnail thì hình khối và màu đọc được, còn chữ thì không. Đây là thứ quyết định một
+   cover TikTok.
+   One full-bleed lane per running language, all of different lengths: at thumbnail size the
+   shapes and colours read and the words do not, which is what actually decides a TikTok
+   cover. */
 function lanes() {
   bg();
-  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 380, 158);
-  const widths = [1.0, 0.86, 0.68, 0.46];
-  let y = 900;
+  const widths = taper(LANGS.length, 1.0, 0.46);
+  // Làn co lại khi có nhiều ngôn ngữ, để cả khối vẫn nằm trong vùng an toàn TikTok.
+  // Lanes shrink as languages pile up, so the block stays inside TikTok's safe area.
+  const lh = Math.min(190, Math.floor(1240 / LANGS.length) - 28);
+  const step = lh + Math.max(10, Math.round(lh * 0.15));
+  const top = 900 - Math.max(0, (LANGS.length - 4)) * step / 2;
+  title(titleLines(), 80, 380, 158);
+  let y = Math.max(620, top);
   LANGS.forEach((l, i) => {
     ctx.fillStyle = l.color;
-    rr(0, y, (W - 120) * widths[i] + 120, 190, 0);
-    ctx.font = sans(700, 92);
+    rr(0, y, (W - 120) * widths[i] + 120, lh, 0);
+    ctx.font = sans(700, Math.min(92, Math.round(lh * 0.62)));
     ctx.fillStyle = '#0B0E13';
     ctx.letterSpacing = '3px';
-    ctx.fillText(l.label, 80, y + 128);
+    ctx.fillText(l.label, 80, y + lh * 0.68);
     ctx.letterSpacing = '0px';
-    y += 218;
+    y += step;
   });
   ctx.font = mono(700, 34);
   ctx.fillStyle = DIM;
-  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+  ctx.fillText(footLine(), 80, 1840);
 }
 
-/* 2 — COLUMNS. Bốn cột dựng đứng cao thấp khác nhau, như biểu đồ đứng dậy. Khoảng trống
-   trên đầu để chừa chỗ cho avatar và nút của TikTok.
-   Four standing columns of unlike heights, a bar chart on its feet. The space up top is
-   left clear for TikTok's own avatar and buttons. */
+/* 2 — COLUMNS. Một cột cho mỗi ngôn ngữ, cao thấp khác nhau, như biểu đồ đứng dậy. Cột hẹp
+   lại khi có nhiều ngôn ngữ. Khoảng trống trên đầu để chừa chỗ cho avatar và nút của TikTok.
+   One standing column per language, of unlike heights — a bar chart on its feet — narrowing
+   as languages are added. The space up top is left clear for TikTok's own avatar and
+   buttons. */
 function columns() {
   bg();
-  const heights = [1080, 980, 760, 560];
-  const cw = 200, gap = 32;
-  const x0 = (W - (cw * 4 + gap * 3)) / 2;
+  const heights = taper(LANGS.length, 1080, 560);
+  const n = LANGS.length;
+  const gap = n > 5 ? 18 : 32;
+  const cw = Math.min(200, Math.floor((W - 160 - gap * (n - 1)) / n));
+  const x0 = (W - (cw * n + gap * (n - 1))) / 2;
   const base = 1700;
   LANGS.forEach((l, i) => {
     const x = x0 + i * (cw + gap);
@@ -102,31 +124,34 @@ function columns() {
     ctx.save();
     ctx.translate(x + cw / 2, base - 40);
     ctx.rotate(-Math.PI / 2);
-    ctx.font = sans(700, 74);
+    ctx.font = sans(700, Math.min(74, Math.round(cw * 0.37)));
     ctx.fillStyle = '#0B0E13';
-    ctx.letterSpacing = '4px';
+    ctx.letterSpacing = cw < 140 ? '1px' : '4px';
     ctx.textAlign = 'left';
     ctx.fillText(l.label, 0, 26);
     ctx.restore();
     ctx.textAlign = 'left';
     ctx.letterSpacing = '0px';
   });
-  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 340, 132);
+  title(titleLines(), 80, 340, 132);
   ctx.font = mono(700, 34);
   ctx.fillStyle = DIM;
-  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+  ctx.fillText(footLine(), 80, 1840);
 }
 
-/* 3 — TEXTURE. Tên 17 bài test rải thành nền mờ, tiêu đề đè lên. Nhìn ra ngay là "có dữ
-   liệu thật ở đây", hợp với người xem kỹ thuật.
-   The seventeen benchmark names laid down as a dim field with the title punched over it.
-   It reads as "there is real data here", which is what a technical viewer responds to. */
+/* 3 — TEXTURE. Tên mọi bài test trong registry rải thành nền mờ, tiêu đề đè lên. Nhìn ra
+   ngay là "có dữ liệu thật ở đây", hợp với người xem kỹ thuật.
+   Every benchmark name in the registry laid down as a dim field with the title punched over
+   it. It reads as "there is real data here", which is what a technical viewer responds to. */
 function texture() {
   bg();
   ctx.font = mono(700, 40);
   ctx.fillStyle = '#182030';
+  // Chưa có registry thì bỏ hẳn phần nền: rải chuỗi rỗng ra sẽ thành một trang "undefined".
+  // No registry yet means no field at all: laying out empty strings would print a page of
+  // "undefined".
   let ty = 120;
-  for (let r = 0; r < 22; r++) {
+  for (let r = 0; BENCHES.length && r < 22; r++) {
     let tx = 40 - (r % 3) * 90;
     while (tx < W) {
       const b = BENCHES[(r * 5 + Math.floor(tx / 100)) % BENCHES.length];
@@ -137,15 +162,20 @@ function texture() {
   }
   ctx.fillStyle = 'rgba(11,14,19,.72)';
   ctx.fillRect(0, 520, W, 900);
-  title(['Bài test', 'hiệu năng', 'ngôn ngữ'], 80, 700, 150);
-  let x = 80;
+  title(titleLines(), 80, 700, 150);
+  // Chú giải tự xuống dòng: bốn ngôn ngữ vừa một dòng, tám thì không.
+  // The legend wraps: four languages fit one line, eight do not.
+  let x = 80, ly = 1262;
+  ctx.font = sans(700, 60);
   LANGS.forEach((l) => {
+    const w = 50 + ctx.measureText(l.label).width + 56;
+    if (x + w > W - 60) { x = 80; ly += 82; }
     ctx.fillStyle = l.color;
-    rr(x, 1230, 34, 34, 9);
+    rr(x, ly - 32, 34, 34, 9);
     ctx.font = sans(700, 60);
     ctx.fillStyle = INK;
-    ctx.fillText(l.label, x + 50, 1262);
-    x += 50 + ctx.measureText(l.label).width + 56;
+    ctx.fillText(l.label, x + 50, ly);
+    x += w;
   });
 }
 
@@ -158,18 +188,21 @@ function typeOnly() {
   const y = title(['Bài', 'test', 'hiệu', 'năng'], 80, 460, 260);
   ctx.fillStyle = HAIR;
   ctx.fillRect(80, y - 100, W - 160, 4);
-  let x = 80;
+  let x = 80, ly = y - 16;
+  ctx.font = mono(800, 52);
   LANGS.forEach((l) => {
+    const w = 44 + ctx.measureText(l.label).width + 48;
+    if (x + w > W - 60) { x = 80; ly += 74; }
     ctx.fillStyle = l.color;
-    rr(x, y - 44, 30, 30, 8);
+    rr(x, ly - 28, 30, 30, 8);
     ctx.font = mono(800, 52);
     ctx.fillStyle = INK;
-    ctx.fillText(l.label, x + 44, y - 16);
-    x += 44 + ctx.measureText(l.label).width + 48;
+    ctx.fillText(l.label, x + 44, ly);
+    x += w;
   });
   ctx.font = mono(700, 34);
   ctx.fillStyle = DIM;
-  ctx.fillText('17 BÀI TEST · CÙNG MỘT THUẬT TOÁN', 80, 1840);
+  ctx.fillText(footLine(), 80, 1840);
 }
 
 const DRAW = [lanes, columns, texture, typeOnly];
@@ -195,13 +228,20 @@ document.getElementById('dl').onclick = () => {
 document.querySelector('[data-v="0"]').dataset.on = '1';
 draw();
 if (document.fonts?.ready) document.fonts.ready.then(draw);
-fetch('/api/host').then((r) => r.json()).then(({ host }) => {
-  for (const l of LANGS) {
-    const m = /(\d+\.\d+(?:\.\d+)?)/.exec(host.toolchains?.[l.id] || '');
-    if (m) l.v = m[1];
-  }
+// Cùng hai nguồn màn hình đua dùng: ngôn ngữ đang chạy (/api/languages) và danh sách bài
+// test (/api/registry). Trang cover không có nguồn riêng nào, và không viết cứng gì cả.
+// The same two sources the race screen reads: the running languages (/api/languages) and the
+// benchmark list (/api/registry). The cover page has no source of its own and hard-codes
+// nothing.
+(async () => {
+  LANGS = await fetchLangs();
   draw();
-}).catch(() => {});
+  try {
+    const registry = await (await fetch('/api/registry')).json();
+    BENCHES = registry.benchmarks.map((b) => b.id);
+    draw();
+  } catch {}
+})();
 </script>
 </body>
 </html>
